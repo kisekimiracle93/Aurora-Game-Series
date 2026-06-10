@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemydata"]
+
+[resource]
+script = ExtResource("1_enemydata")
+name = "Aether Wolf"
+class_type = "Aetherion"
+element = "Ice"
+is_heir = false
+base_stats = {
+"accuracy": 90,
+"aether": 0,
+"crit": 5,
+"evasion": 8,
+"focus": 16,
+"guard": 16,
+"hp": 160,
+"power": 26,
+"speed": 26,
+"ward": 14
+}
+affinities = {
+"Fire": "weak",
+"Ice": "resist"
+}
+ability_ids = Array[String](["attack_basic"])
+ferocity = 1.0
+stability = 0.0
+ai_profile = "basic"
+accumulates_delay_resistance = false

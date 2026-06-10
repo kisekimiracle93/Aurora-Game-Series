@@ -130,3 +130,64 @@ floor 75.
 **Open issues:** none.
 
 **Deviations:** none.
+
+---
+
+## M3 — Combat encounter loop (first playable) — BUILT, awaiting PLAYTEST CHECKPOINT 1
+
+Visual/interactive work is **in progress, not done**, until the human has played it.
+All M3 *logic* is headless-verified.
+
+**Built:**
+
+- `combat/base_combatant.gd` — `BaseCombatant` (Node2D) composing Stats/Meters/CTB/
+  Status/Abilities components; factories `from_character` / `from_enemy`; Darkness wiring
+  (HP-cap degradation + forced-KO at 100), accuracy after status/Darkness penalties,
+  guard flag, enemy neutral-Resolve stand-in (ferocity applied as offense bias instead).
+- `combat/action_resolver.gd` — one ability use end-to-end: accuracy roll (chosen rule:
+  `clamp(accuracy − evasion, 20, 100)`; logged as a deviation-by-necessity since the plan
+  defines no physical-hit formula), damage via DamageMath (element/Layer/crit/guard ×0.5/
+  Resolve-defense), absorb→heal, status riders (incl. Resolve Shock drop), Time delay,
+  Echo gains, Resolve erosion from damage taken (25 × dmg/maxHP). All RNG injected.
+- `combat/combat_encounter.gd` — jump-time turn loop + state machine (Init→…→CheckEnd
+  as a synchronous `advance_until_input()`); stub enemy AI (random living player target,
+  M4 replaces with the priority list); freeze skips the turn at Normal cost; DoT ticks at
+  turn start; ally-death Resolve drop (−20), victory gain (+10); timeline preview signal
+  (next 8, assumes Normal cost); 10k-step runaway guard.
+- UI (programmatic grey-box): `CombatantToken` (rect + name + HP sliver + hit flash +
+  guard tag), `TurnTimeline`, `PartyHUD` (HP/Aether/Resolve+band/Darkness[heirs]/Echo),
+  `ActionMenu` (greys out unaffordable/silenced), `TargetSelect`, `CombatLog`.
+- `world/battle_test.tscn` (**main scene**): Bastil/Cavene/Jecht/Mati vs 3 Aether Wolves;
+  victory/defeat overlay; "Fight again" carries meters; defeat "Retry" applies −15 Resolve.
+- Data: `attack_basic` + `guard` abilities; cavene/jecht/mati character `.tres` (Heirs
+  flagged); `aether_wolf.tres` (weak Fire / resists Ice).
+
+**Test status:** `96/96 passed (385 asserts)` — headless, green. New coverage: resolver
+(variance band, immune=0 no-echo, absorb heals, 20%-floor miss rate, guard ≈half,
+echo+resolve side effects, Resolve Shock drop, Time delay, heal band, Darkness LayerMod
+×1.3 on a live heir) and encounter (scripted 4v2 runs to victory; fastest-first turn
+order [Cavene]; 8-entry preview; outnumbered defeat; ally-death Resolve drop; guard flow;
+aether gating keeps awaiting input). Plus scene smoke tests: `battle_test.tscn` boots
+headless to AWAITING_PLAYER with menu open; UI submit path advances. Game binary boots
+clean (`--quit-after 5`, exit 0).
+
+**Numbers I chose (tunable):** hit-chance clamp 20–100; Resolve erosion scale 25;
+ally-death drop −20; victory gain +10; frozen turn costs 850; stub fight = 3 wolves.
+
+**Open issues:**
+
+- Timeline preview assumes a uniform Normal (850) cost for future turns; exact per-actor
+  costs would need per-ability lookahead. Revisit if the preview reads wrong in play.
+- Enemy AI is the M3 stub (random target). M4 brings merc-aggro → low-Resolve →
+  high-Darkness priority.
+
+**Deviations:** physical/magic accuracy roll formula chosen as above (plan silent);
+Guard implemented as engine-handled ability id `guard` (still data-driven in menus).
+
+**▶ PLAYTEST CHECKPOINT 1 — what to test (run `godot --path .` with Godot 4.6):**
+
+1. Does the 4-vs-3 fight run start to finish (win AND lose at least once)?
+2. Is the turn-order preview readable and does it match who actually acts next?
+3. Do HP / Aether / Resolve (+band colors) / Darkness (Jecht & Mati) / Echo read clearly?
+4. Guard: does damage visibly shrink? Defeat→Retry: does Resolve start 15 lower?
+5. Report any crash/script error verbatim, plus anything that feels off.

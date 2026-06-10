@@ -4,24 +4,24 @@
 
 [resource]
 script = ExtResource("1_chardata")
-name = "Bastil"
-class_type = "Aetherion"
-element = "Fire"
-is_heir = false
+name = "Mati"
+class_type = "Heir"
+element = "Ice"
+is_heir = true
 base_stats = {
-"accuracy": 92,
-"aether": 40,
-"crit": 6,
-"evasion": 6,
-"focus": 22,
-"guard": 30,
-"hp": 340,
-"power": 32,
-"speed": 24,
-"ward": 24
+"accuracy": 93,
+"aether": 70,
+"crit": 5,
+"evasion": 8,
+"focus": 36,
+"guard": 20,
+"hp": 260,
+"power": 20,
+"speed": 25,
+"ward": 30
 }
 affinities = {
-"Fire": "resist",
-"Ice": "neutral"
+"Fire": "neutral",
+"Ice": "resist"
 }
 ability_ids = Array[String](["attack_basic", "guard"])

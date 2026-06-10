@@ -4,21 +4,21 @@
 
 [resource]
 script = ExtResource("1_chardata")
-name = "Bastil"
+name = "Cavene"
 class_type = "Aetherion"
 element = "Fire"
 is_heir = false
 base_stats = {
-"accuracy": 92,
-"aether": 40,
-"crit": 6,
-"evasion": 6,
-"focus": 22,
-"guard": 30,
-"hp": 340,
-"power": 32,
-"speed": 24,
-"ward": 24
+"accuracy": 94,
+"aether": 60,
+"crit": 8,
+"evasion": 8,
+"focus": 34,
+"guard": 22,
+"hp": 280,
+"power": 26,
+"speed": 27,
+"ward": 26
 }
 affinities = {
 "Fire": "resist",
