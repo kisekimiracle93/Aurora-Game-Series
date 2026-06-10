@@ -77,6 +77,27 @@ func register_darkness(default_value: float = 0.0) -> void:
 	register_meter(DARKNESS, MeterMath.DARKNESS_MIN, MeterMath.DARKNESS_MAX, default_value, true)
 
 
+## Echo gauge is battle-scoped: not persistent, resets via set_value at battle start.
+func register_echo() -> void:
+	register_meter(ECHO, 0.0, EchoMath.ECHO_MAX, 0.0, false)
+
+
+func echo() -> float:
+	return get_value(ECHO)
+
+
+func echo_ready() -> bool:
+	return is_full(ECHO)
+
+
+## Spend a full gauge on an Echo ability; refillable within the battle (multi-use).
+func spend_echo() -> bool:
+	if not echo_ready():
+		return false
+	set_value(ECHO, 0.0)
+	return true
+
+
 func resolve() -> float:
 	return get_value(RESOLVE)
 

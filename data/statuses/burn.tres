@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/status_data.gd" id="1_status"]
+
+[resource]
+script = ExtResource("1_status")
+id = "burn"
+display_name = "Burn"
+base_duration = 3
+speed_mult = 1.0
+on_tick = "burn_damage"
+tick_fraction = 0.05
+blocks_action = false
+blocks_spells = false
+accuracy_delta = 0.0
+resolve_drop_min = 0
+resolve_drop_max = 0

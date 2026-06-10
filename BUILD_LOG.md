@@ -92,3 +92,41 @@ combination, min-damage clamp, crit multiplier, Resolve bands, Darkness curve.
 **Deviations:** `StatusData` carries data-driven behavior flags beyond the bare 5.1 schema
 (`blocks_action`, `blocks_spells`, `accuracy_delta`, `tick_fraction`, resolve-shock drop
 range) so status behavior stays in data rather than hardcoded by id.
+
+---
+
+## M2 — Status system + Echo + persistence (logic only) — DONE
+
+**Built:**
+
+- `combat/status_math.gd` — hit chance (5–95 clamp, Focus−Ward scaling, Resolve factor,
+  resistance subtraction), duration scaling (min 1 turn), Resolve Shock drop roll.
+- `components/status_component.gd` — deterministic `try_apply` (caller supplies rolls),
+  per-status resistance stacking (+20 pts per successful application), innate resistance
+  (boss `stability` hook), hard immunity, freeze/silence lockouts, stacked speed mult,
+  accuracy deltas, per-turn `tick_turn()` with burn/bleed hooks + expiry. Tick damage is
+  routed by the encounter (M3), keeping components decoupled.
+- The six status definitions as `.tres` in `data/statuses/`: freeze (action lock, 2t),
+  burn (5% max-HP/turn, 3t), slow (×0.7 speed, 3t), silence (spell lock, 2t), bleed
+  (4% max-HP/turn, ×0.9 speed, 3t), resolve_shock (−20..−40 Resolve + ×0.85 speed,
+  −10 accuracy, 2t).
+- `combat/echo_math.gd` + `MetersComponent` echo helpers — gauge 0–100, battle-scoped,
+  fills from damage dealt (25 pts per 100% of target max HP) and taken (50 pts per 100%
+  of own max HP), spend requires full gauge, refillable (multi-use per battle).
+- `data/save_data.gd` (`SaveData` resource) + `world/save_system.gd` — write/read/delete,
+  save-point recovery (drain Darkness to 0, restore Resolve up to a 75 floor, never
+  lowering), retry penalty (−15 Resolve, clamped at 0), per-character collect/apply.
+
+**Test status:** `77/77 passed (316 asserts)` — headless, green.
+Covers every M2 checklist item: hit-chance clamps at 5/95, duration scales with
+Focus−Ward and Resolve, resistance reduces repeat applications, immunity blocks,
+Resolve Shock drop + debuff, Echo gauge fill/spend (multi-use), save→load round-trip,
+retry lowers Resolve.
+
+**Numbers I chose (tunable):** resistance stack step 20 pts; burn 5% / bleed 4% max HP
+per tick; Echo rates 25 (dealt) / 50 (taken); retry penalty −15; save-point Resolve
+floor 75.
+
+**Open issues:** none.
+
+**Deviations:** none.
