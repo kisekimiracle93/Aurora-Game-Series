@@ -1,0 +1,15 @@
+# Godot 4 generated files
+.godot/
+*.translation
+
+# Imported assets cache (legacy 3.x, kept for safety)
+.import/
+
+# Mono/C# (unused, kept for safety)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS junk
+.DS_Store
+Thumbs.db
