@@ -29,13 +29,16 @@ func open_for(actor: BaseCombatant) -> void:
 	if attack != null:
 		_add_button(actor, attack)
 	for skill: AbilityData in actor.abilities.get_skills():
-		if skill.id != "guard":
+		if skill.id != "guard" and skill.id != "pray":
 			_add_button(actor, skill)
 	for echo: AbilityData in actor.abilities.get_echoes():
 		_add_button(actor, echo, not actor.meters.echo_ready())
 	var guard: AbilityData = actor.abilities.find_by_id("guard")
 	if guard != null:
 		_add_button(actor, guard)
+	var pray: AbilityData = actor.abilities.find_by_id("pray")
+	if pray != null:
+		_add_button(actor, pray)
 
 	visible = true
 	var first_button: Button = _first_button()

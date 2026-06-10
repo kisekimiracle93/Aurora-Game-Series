@@ -20,3 +20,5 @@ extends Resource
 @export var darkness_cost: int = 0
 ## Negative-space heal: support abilities heal for coeff * Focus when > 0.
 @export var heals: bool = false
+## Resolve restored to the target on a landed/support use (Rally-type abilities).
+@export var resolve_gain: int = 0

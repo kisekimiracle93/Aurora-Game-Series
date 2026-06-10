@@ -84,6 +84,9 @@ func submit_player_action(ability: AbilityData, targets: Array[BaseCombatant]) -
 	if not current_actor.stats.can_spend_aether(ability.aether_cost):
 		_log("%s lacks the Aether for %s." % [current_actor.display_name, ability.display_name])
 		return  # stays AWAITING_PLAYER; UI should grey these out
+	if ability.ability_type == "echo" and not current_actor.meters.echo_ready():
+		_log("%s's Echo gauge is not full." % current_actor.display_name)
+		return
 	state = State.RESOLVING
 	_execute(current_actor, ability, targets)
 	if state == State.RESOLVING:
@@ -146,7 +149,7 @@ func _advance_timeline() -> BaseCombatant:
 
 
 func _enemy_take_turn(actor: BaseCombatant) -> void:
-	var ability: AbilityData = _pick_enemy_ability(actor)
+	var ability: AbilityData = EnemyAI.pick_ability(actor, rng)
 	if ability == null:
 		_log("%s hesitates..." % actor.display_name)
 		actor.ctb.pay_action_cost(CTBMath.COST_NORMAL)
@@ -155,24 +158,30 @@ func _enemy_take_turn(actor: BaseCombatant) -> void:
 	var targets_pool: Array[BaseCombatant] = living(party)
 	if targets_pool.is_empty():
 		return
-	## Stub AI (M3): random living player. M4 swaps in the priority list.
-	var target: BaseCombatant = targets_pool[rng.randi_range(0, targets_pool.size() - 1)]
-	_execute(actor, ability, [target])
+	var targets: Array[BaseCombatant]
+	if ability.targeting == "aoe":
+		targets = targets_pool
+	else:
+		var profile: String = _ai_profile_for(actor)
+		targets = [EnemyAI.pick_target(profile, targets_pool, rng)]
+	_execute(actor, ability, targets)
 
 
-func _pick_enemy_ability(actor: BaseCombatant) -> AbilityData:
-	for ability: AbilityData in actor.abilities.get_all():
-		if actor.stats.can_spend_aether(ability.aether_cost):
-			return ability
-	return null
+func _ai_profile_for(actor: BaseCombatant) -> String:
+	var data: EnemyData = actor.source_enemy_data
+	return data.ai_profile if data != null else "basic"
 
 
 func _execute(actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant]) -> void:
 	actor.stats.spend_aether(ability.aether_cost)
+	if ability.ability_type == "echo":
+		actor.meters.spend_echo()
 	var results: Array[Dictionary] = []
 	if ability.id == "guard":
 		actor.is_guarding = true
 		_log("%s guards." % actor.display_name)
+	elif ability.id == "pray":
+		_log("%s prays, leaving themselves open..." % actor.display_name)
 	else:
 		results = ActionResolver.resolve_action(ability, actor, targets, rng)
 		_log_results(actor, ability, results)
@@ -255,6 +264,8 @@ func _log_results(
 			parts.append("inflicts %s" % ", ".join(applied))
 		if bool(result["delayed"]):
 			parts.append("delays %s" % target.display_name)
+		if int(result.get("resolve_gain", 0)) > 0:
+			parts.append("steels %s (+%d Resolve)" % [target.display_name, result["resolve_gain"]])
 		if parts.is_empty():
 			parts.append("has no effect on %s" % target.display_name)
 		_log("%s: %s %s." % [actor.display_name, ability.display_name, " — ".join(parts)])

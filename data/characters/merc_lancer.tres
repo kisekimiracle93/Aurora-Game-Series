@@ -4,24 +4,25 @@
 
 [resource]
 script = ExtResource("1_chardata")
-name = "Cavene"
+name = "Church Lancer"
 class_type = "Aetherion"
-element = "Fire"
+element = "Neutral"
 is_heir = false
 base_stats = {
-"accuracy": 94,
-"aether": 60,
-"crit": 8,
-"evasion": 8,
-"focus": 34,
-"guard": 22,
-"hp": 280,
-"power": 26,
-"speed": 27,
-"ward": 26
+"accuracy": 91,
+"aether": 0,
+"crit": 6,
+"evasion": 5,
+"focus": 12,
+"guard": 18,
+"hp": 180,
+"power": 28,
+"speed": 23,
+"ward": 12
 }
 affinities = {
-"Fire": "resist",
+"Fire": "neutral",
 "Ice": "neutral"
 }
-ability_ids = Array[String](["attack_basic", "aetherflare", "scorchstep", "echo_trial_by_fire", "guard", "pray"])
+ability_ids = Array[String](["attack_basic", "lancers_lunge", "guard", "pray"])
+is_merc = true

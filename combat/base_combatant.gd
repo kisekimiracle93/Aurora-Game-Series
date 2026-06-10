@@ -20,6 +20,8 @@ var has_darkness_speed_passive: bool = false
 var is_guarding: bool = false
 ## Darkness hit the forced-KO threshold; needs the special revive (save point).
 var needs_special_revive: bool = false
+## Set for enemies: the EnemyData this combatant was built from (AI profile etc.).
+var source_enemy_data: EnemyData = null
 
 var stats: StatsComponent
 var meters: MetersComponent
@@ -49,6 +51,8 @@ static func from_character(data: CharacterData) -> BaseCombatant:
 	combatant.display_name = data.name
 	combatant.name = data.name
 	combatant.is_player_controlled = true
+	combatant.is_merc = data.is_merc
+	combatant.has_darkness_speed_passive = data.darkness_speed_passive
 	combatant.stats.setup(data.base_stats, data.affinities)
 	combatant.meters.register_resolve()
 	combatant.meters.register_echo()
@@ -66,6 +70,7 @@ static func from_enemy(data: EnemyData) -> BaseCombatant:
 	combatant.display_name = data.name
 	combatant.name = data.name
 	combatant.is_player_controlled = false
+	combatant.source_enemy_data = data
 	combatant.ferocity = data.ferocity
 	combatant.stats.setup(data.base_stats, data.affinities)
 	combatant.ctb.setup(

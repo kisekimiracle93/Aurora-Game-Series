@@ -24,4 +24,5 @@ affinities = {
 "Fire": "neutral",
 "Ice": "resist"
 }
-ability_ids = Array[String](["attack_basic", "guard"])
+ability_ids = Array[String](["attack_basic", "rime_rend", "absolute_zero", "echo_throne_of_winter", "guard", "pray"])
+darkness_speed_passive = true

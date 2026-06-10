@@ -133,7 +133,7 @@ floor 75.
 
 ---
 
-## M3 — Combat encounter loop (first playable) — BUILT, awaiting PLAYTEST CHECKPOINT 1
+## M3 — Combat encounter loop (first playable) — DONE (checkpoint 1 passed)
 
 Visual/interactive work is **in progress, not done**, until the human has played it.
 All M3 *logic* is headless-verified.
@@ -191,3 +191,82 @@ Guard implemented as engine-handled ability id `guard` (still data-driven in men
 3. Do HP / Aether / Resolve (+band colors) / Darkness (Jecht & Mati) / Echo read clearly?
 4. Guard: does damage visibly shrink? Defeat→Retry: does Resolve start 15 lower?
 5. Report any crash/script error verbatim, plus anything that feels off.
+
+---
+
+## ▶ PLAYTEST CHECKPOINT 1 — PASSED (human, 2026-06-10)
+
+Human ran the 4-v-3 wolf fight: win and loss both completed cleanly, no crashes,
+bars read clean, guard visibly cut damage, turn-order preview matched actual
+turns, and the defeat-retry Resolve penalty was confirmed in play. M3 is done.
+
+---
+
+## M4 — Character & enemy content — BUILT, awaiting PLAYTEST CHECKPOINT 2
+
+All M4 logic is headless-verified; feel verdict belongs to the human.
+
+**Built:**
+
+- **Kits as data** (one weapon art / spells + one Echo each; Aether costs now bite):
+  - Bastil: Oathfire Strike (phys Fire 2.2, 12 AE, 40% Burn), Rally by Flame
+    (+15 Resolve to an ally — new `resolve_gain` field), Echo: The Living Pyre
+    (phys Fire AoE 2.6 + Burn chance).
+  - Cavene: Aetherflare (magic Fire 2.4, 35% Burn), Scorchstep (magic Fire 1.6 +
+    Small delay 200 — Time utility rider), Echo: Trial by Fire (magic Fire AoE 3.2).
+  - Jecht (Heir): Rime Rend (phys Ice 2.4, +12 Darkness, 25% Freeze), Absolute Zero
+    (magic Ice AoE 2.0, +20 Darkness, 40% Slow), Echo: Throne of Winter (magic Ice
+    AoE 3.5, +25 Darkness). `darkness_speed_passive = true` (the M1 speed curve).
+  - Mati (Heir): Glacial Benediction (heal, Focus×2.2), Hymn of Snowfall (AoE
+    debuff: 45% Slow + 15% Freeze, +8 Darkness), Echo: The Last Snow (AoE heal 3.0).
+  - **Pray** (shared, human-requested): true no-op, self, Heavy 1100 CT — passes
+    the turn with zero protection, for damage testing. Encounter logs it distinctly.
+- **Church Lancer merc**: slot 5, `is_merc` flag, 180 HP, 0 Aether (skills only:
+  Lancer's Lunge — phys 2.0, 35% Bleed), draws all priority-AI aggro.
+- **Enemies**: Aether Wolf gains Fearful Howl (40% Resolve Shock) + `priority` AI;
+  Icebound Stag (mini-elite, 420 HP, stability 0.3, Antler Charge + Glacial Breath
+  AoE Freeze, `hunt_dark` AI — stalks the highest-Darkness Heir); Crystal Wolf
+  (boss add for M5: fast, fragile, **absorbs Ice**, weak to Fire).
+- **EnemyAI** (`combat/enemy_ai.gd`): priority list per the plan (merc → lowest
+  Resolve → highest Darkness tiebreak), `hunt_dark` profile, 35% special-move
+  chance, respects Silence/affordability, never uses Echo/guard/pray.
+- **Engine wiring**: Echo abilities gate on a full gauge and spend it; AoE targeting
+  end-to-end (player UI submits all valid targets; enemy AoE hits the whole party);
+  `resolve_gain` flows through resolver + combat log; weapon arts ("attack" type)
+  appear in the skill menu but are not Silence-blocked; ActionMenu order:
+  Attack / skills / Echo (gauge-gated) / Guard / Pray.
+- **Scene**: party of 5 (incl. merc, grey-green token) vs 2 Aether Wolves + 1
+  Icebound Stag; HUD resized for 5 panels (merc's 0-Aether bar handled).
+
+**Test status:** `117/117 passed (880 asserts)` — headless, green; game boots clean.
+New coverage: EnemyAI (merc-first, lowest-Resolve, Darkness tiebreak, hunt_dark +
+fallback, silence/echo/guard/pray exclusions, basic/special mix), content sanity
+(kits load with exactly one Echo each, coeffs inside plan ranges, echo CT 1200–1500,
+merc magicless/0-cost, enemy wiring incl. Ice-absorb crystal wolf), and flow
+(Echo gate→spend, Pray no-op + free enemy turn, Rally +15, Absolute Zero pays 20
+Darkness + hits both wolves, Benediction heals 75–83, priority AI dogpiles the merc).
+
+**Numbers I chose (tunable):** above per-ability values; merc 180 HP; stag ferocity
+1.1; AI special chance 35%.
+
+**Open issues / notes for playtest:**
+
+- The glacial roster resists Ice, so the Heirs' Ice kits are deliberately
+  situational here (their payoff is the boss's P3 Ice vulnerability). Watch
+  whether that reads as "tactical" or just "bad" — tune affinities if the latter.
+- Crystal Wolves absorbing Ice will punish careless Heir AoE in the boss fight
+  (intended texture; verify it reads fairly in M5).
+
+**Deviations:** `resolve_gain` added to AbilityData (Rally-type morale support is
+core to Bastil's GDD identity and the slice's Resolve focus); Pray added on human
+request as a shared no-op action.
+
+**▶ PLAYTEST CHECKPOINT 2 — what to test (`godot --path .`):**
+
+1. Do the four characters feel different (Bastil anchor / Cavene spell-debuffer /
+   Jecht darkness burst / Mati support)?
+2. Is damage "dangerous, not spongey" — do the wolves + stag threaten a 5-slot party?
+3. Does the merc visibly soak aggro and feel appropriately fragile?
+4. Does Darkness feel powerful-but-scary on the Heirs (HP cap shrinking as it rises)?
+5. Do Aether costs force real choices? Does the Echo gauge → Echo ability loop read?
+6. Pray: park the party on it and confirm enemies wail on you unprotected.

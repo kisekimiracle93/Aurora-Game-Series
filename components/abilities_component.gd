@@ -21,11 +21,14 @@ func find_by_id(ability_id: String) -> AbilityData:
 	return null
 
 
-## Skills/spells shown in the Skill submenu (everything but the basic attack/guard).
+## Skills shown in the menu: weapon arts ("attack" beyond the basic), spells,
+## and supports. Echo/guard/pray are surfaced separately by the ActionMenu.
 func get_skills() -> Array[AbilityData]:
 	var skills: Array[AbilityData] = []
 	for ability: AbilityData in _abilities:
-		if ability.ability_type == "spell" or ability.ability_type == "support":
+		if ability.ability_type == "attack" and ability.id != "attack_basic":
+			skills.append(ability)
+		elif ability.ability_type == "spell" or ability.ability_type == "support":
 			skills.append(ability)
 	return skills
 

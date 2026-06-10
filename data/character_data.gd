@@ -12,3 +12,7 @@ extends Resource
 ## element -> "weak"|"neutral"|"resist"|"absorb"|"immune"
 @export var affinities: Dictionary = {}
 @export var ability_ids: Array[String] = []
+## Hireable mercenary: low HP, no magic, draws enemy aggro (AI priority).
+@export var is_merc: bool = false
+## Jecht's passive: CTB speed bonus scaling with Darkness (CTBMath).
+@export var darkness_speed_passive: bool = false

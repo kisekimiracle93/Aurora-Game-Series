@@ -8,9 +8,14 @@ const PARTY_PATHS: Array[String] = [
 	"res://data/characters/cavene.tres",
 	"res://data/characters/jecht.tres",
 	"res://data/characters/mati.tres",
+	"res://data/characters/merc_lancer.tres",
 ]
-const ENEMY_PATH: String = "res://data/enemies/aether_wolf.tres"
-const ENEMY_COUNT: int = 3
+const ENEMY_PATHS: Array[String] = [
+	"res://data/enemies/aether_wolf.tres",
+	"res://data/enemies/aether_wolf.tres",
+	"res://data/enemies/icebound_stag.tres",
+]
+const MERC_COLOR: Color = Color(0.55, 0.65, 0.6)
 
 const PARTY_COLOR: Color = Color(0.35, 0.55, 0.9)
 const HEIR_COLOR: Color = Color(0.62, 0.4, 0.95)
@@ -78,18 +83,26 @@ func _spawn_party(is_defeat_retry: bool) -> void:
 		var data: CharacterData = load(PARTY_PATHS[i])
 		var member: BaseCombatant = BaseCombatant.from_character(data)
 		_apply_carried_meters(member, is_defeat_retry)
-		member.position = Vector2(300, 130 + i * 92)
+		member.position = Vector2(300, 100 + i * 82)
 		add_child(member)
 		party.append(member)
-		_add_token(member, HEIR_COLOR if data.is_heir else PARTY_COLOR)
+		var color: Color = PARTY_COLOR
+		if data.is_heir:
+			color = HEIR_COLOR
+		elif data.is_merc:
+			color = MERC_COLOR
+		_add_token(member, color)
 
 
 func _spawn_enemies() -> void:
-	var data: EnemyData = load(ENEMY_PATH)
-	for i: int in range(ENEMY_COUNT):
+	var name_counts: Dictionary = {}
+	for i: int in range(ENEMY_PATHS.size()):
+		var data: EnemyData = load(ENEMY_PATHS[i])
 		var enemy: BaseCombatant = BaseCombatant.from_enemy(data)
-		enemy.display_name = "%s %d" % [data.name, i + 1]
-		enemy.position = Vector2(950, 160 + i * 100)
+		name_counts[data.name] = int(name_counts.get(data.name, 0)) + 1
+		if int(name_counts[data.name]) > 1 or ENEMY_PATHS.count(ENEMY_PATHS[i]) > 1:
+			enemy.display_name = "%s %d" % [data.name, name_counts[data.name]]
+		enemy.position = Vector2(950, 140 + i * 105)
 		add_child(enemy)
 		enemies.append(enemy)
 		_add_token(enemy, ENEMY_COLOR)
@@ -157,11 +170,13 @@ func _on_ability_chosen(ability: AbilityData) -> void:
 	if ability.targeting == "self":
 		encounter.submit_player_action(ability, [encounter.current_actor])
 		return
-	var candidates: Array[BaseCombatant]
-	if ability.heals or ability.ability_type == "support":
-		candidates = encounter.living(encounter.party)
-	else:
-		candidates = encounter.living(encounter.enemies)
+	var friendly: bool = ability.heals or ability.ability_type == "support"
+	var candidates: Array[BaseCombatant] = (
+		encounter.living(encounter.party) if friendly else encounter.living(encounter.enemies)
+	)
+	if ability.targeting == "aoe":
+		encounter.submit_player_action(ability, candidates)
+		return
 	target_select.open_for(candidates)
 
 

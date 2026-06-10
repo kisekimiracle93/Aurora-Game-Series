@@ -24,4 +24,4 @@ affinities = {
 "Fire": "resist",
 "Ice": "neutral"
 }
-ability_ids = Array[String](["attack_basic", "guard"])
+ability_ids = Array[String](["attack_basic", "oathfire_strike", "rally_by_flame", "echo_living_pyre", "guard", "pray"])

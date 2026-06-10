@@ -43,7 +43,7 @@ func set_active(actor: BaseCombatant) -> void:
 func _build_panel(member: BaseCombatant) -> Dictionary:
 	var controls: Dictionary = {}
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(296, 0)
+	panel.custom_minimum_size = Vector2(242, 0)
 	_row.add_child(panel)
 	controls["panel"] = panel
 
@@ -75,7 +75,7 @@ func _add_bar(parent: VBoxContainer, label_text: String, fill: Color) -> Diction
 	row.add_child(tag)
 	var bar: ProgressBar = ProgressBar.new()
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(150, 12)
+	bar.custom_minimum_size = Vector2(105, 12)
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style: StyleBoxFlat = StyleBoxFlat.new()
 	style.bg_color = fill
@@ -116,7 +116,7 @@ func _refresh(member: BaseCombatant) -> void:
 
 func _set_bar(bar_controls: Dictionary, value: int, max_value: int, show_max: bool) -> void:
 	var bar: ProgressBar = bar_controls["bar"]
-	bar.max_value = max_value
+	bar.max_value = maxi(max_value, 1)  # merc has 0 Aether; avoid a 0-range bar
 	bar.value = value
 	var value_label: Label = bar_controls["value"]
 	value_label.text = "%d/%d" % [value, max_value] if show_max else str(value)

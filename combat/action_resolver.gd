@@ -40,6 +40,7 @@ static func _resolve_on_target(
 		"statuses_applied": [] as Array[String],
 		"resolve_drop": 0,
 		"delayed": false,
+		"resolve_gain": 0,
 	}
 
 	var deals_damage: bool = ability.damage_type != "none" and ability.coeff > 0.0
@@ -72,6 +73,10 @@ static func _resolve_on_target(
 
 	if ability.delay_amount > 0:
 		result["delayed"] = target.ctb.receive_delay(float(ability.delay_amount))
+
+	if ability.resolve_gain > 0:
+		target.meters.add(MetersComponent.RESOLVE, float(ability.resolve_gain))
+		result["resolve_gain"] = ability.resolve_gain
 
 	return result
 

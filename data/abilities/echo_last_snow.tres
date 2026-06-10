@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/ability_data.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "echo_last_snow"
+display_name = "Echo: The Last Snow"
+ability_type = "echo"
+damage_type = "none"
+element = "Ice"
+coeff = 3.0
+ct_cost = 1300
+aether_cost = 0
+targeting = "aoe"
+statuses = []
+requirements = {}
+delay_amount = 0
+darkness_cost = 0
+heals = true
+resolve_gain = 0
