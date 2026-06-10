@@ -49,3 +49,46 @@ it wherever they differ.
 **Open issues:** none.
 
 **Deviations:** none (doc reconstruction notes above).
+
+---
+
+## M1 — Core data + combat math (logic only) — DONE
+
+**Built:**
+
+- Resource classes (build plan 5.1): `AbilityData`, `EnemyData` (extends `CharacterData`),
+  `StatusData` (+ existing `CharacterData`).
+- Pure math helpers (static, scene-tree-free):
+  - `combat/ctb_math.gd` — resolve/status/darkness speed mults, effective speed,
+    ticks-to-act, jump-time `advance_to_next_turn`, timeline `build_preview`, action
+    costs, delay + delay-resistance ramp.
+  - `combat/damage_math.gd` — physical/magic formulas, element mods (absorb heals,
+    immune=0), LayerMod (Resolve×Darkness), crit (+Resolve crit bonus), min-clamp,
+    Resolve-based incoming-damage mult.
+  - `combat/meter_math.gd` — Resolve band classification, Darkness max-HP degradation,
+    accuracy penalty, forced-KO threshold.
+- Components (thin Node wrappers over the math): `StatsComponent` (pools, affinities,
+  death signal, Darkness HP-cap), `MetersComponent` (generic registry — Resolve/Darkness
+  now, Duty/Burden plug in later), `CTBComponent` (CT, costs, delay + boss DR).
+
+**Test status:** `51/51 passed (198 asserts)` — headless, green.
+Covers every M1 checklist item: ticks-to-act, mixed-group turn order (hand-simulated
+A→B→C→A with Normal costs), action-cost pushback, delay + DR incl. immunity at 100%,
+hand-computed physical/magic values, element mods incl. absorb/immune, LayerMod
+combination, min-damage clamp, crit multiplier, Resolve bands, Darkness curve.
+
+**Numbers I chose (within plan ranges / spirit — tune at playtest):**
+
+- Jecht's Darkness speed passive: up to **+15%** at Darkness 100 (`CTBMath.darkness_speed_bonus`).
+- Darkness max-HP degradation: up to **−30%** at 100; accuracy penalty up to **−20 pts**
+  ramping from Darkness 20; forced-KO threshold = **100** (meter full).
+- Resolve crit bonus: 0 below R=81, scaling to **+10%** at 120.
+- Effective-speed floor 0.01 (Stop-lite 0.05 still dominates; avoids div-by-zero).
+- Damage `Random` variance **0.95–1.05**, injected as a parameter so formulas stay
+  deterministic under test; components will pass a seeded RNG.
+
+**Open issues:** none.
+
+**Deviations:** `StatusData` carries data-driven behavior flags beyond the bare 5.1 schema
+(`blocks_action`, `blocks_spells`, `accuracy_delta`, `tick_fraction`, resolve-shock drop
+range) so status behavior stays in data rather than hardcoded by id.

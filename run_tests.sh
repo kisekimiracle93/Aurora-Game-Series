@@ -6,11 +6,9 @@ cd "$(dirname "$0")"
 
 GODOT_BIN="${GODOT_BIN:-godot}"
 
-# First run (or after clean checkout) the project must be imported so
-# class_name registrations and .tres resources resolve headless.
-if [ ! -d .godot ]; then
-	"$GODOT_BIN" --headless --path . --import >/dev/null 2>&1
-fi
+# Import before every run so new class_name scripts and .tres resources
+# are registered in the headless script-class cache (cheap on this project).
+"$GODOT_BIN" --headless --path . --import >/dev/null 2>&1
 
 exec "$GODOT_BIN" --headless --path . -s addons/gut/gut_cmdln.gd \
 	-gdir=res://test -ginclude_subdirs -gexit "$@"
