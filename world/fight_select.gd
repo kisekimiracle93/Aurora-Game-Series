@@ -33,6 +33,13 @@ func _ready() -> void:
 	boss.pressed.connect(func() -> void: _start("boss"))
 	box.add_child(boss)
 
+	var back: Button = Button.new()
+	back.text = "< Main menu"
+	back.pressed.connect(
+		func() -> void: get_tree().change_scene_to_file("res://world/main_menu.tscn")
+	)
+	box.add_child(back)
+
 	var hint: Label = Label.new()
 	hint.text = "Pray passes a turn with no defense — handy for damage testing."
 	hint.add_theme_font_size_override("font_size", 13)

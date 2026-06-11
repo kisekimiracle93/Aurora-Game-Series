@@ -88,19 +88,36 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	if boss_controller != null:
 		encounter.register_boss_controller(boss_controller)
 		boss_controller.phase_changed.connect(_on_boss_phase_changed)
+	var music: Node = get_node_or_null("/root/MusicManager")
+	if music != null:
+		music.play_track("boss" if roster == "boss" else "battle")
 	encounter.start()
 
 
 func _build_battlefield() -> void:
+	# Real backdrop art when supplied (assets/sprites/backgrounds/boss.png or
+	# battle.png); the phase-tint ColorRect rides on top either way so boss
+	# phase cues stay readable over any art.
+	var art: Texture2D = AssetLibrary.texture(
+		"backgrounds", "boss" if roster == "boss" else "battle"
+	)
+	if art != null:
+		var image: TextureRect = TextureRect.new()
+		image.texture = art
+		image.size = Vector2(1280, 720)
+		image.stretch_mode = TextureRect.STRETCH_SCALE
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		add_child(image)
 	background = ColorRect.new()
-	background.color = PHASE_TINTS[1]
+	background.color = PHASE_TINTS[1] if art == null else Color(PHASE_TINTS[1], 0.35)
 	background.size = Vector2(1280, 720)
 	add_child(background)
-	var ground: ColorRect = ColorRect.new()
-	ground.color = Color(0.13, 0.15, 0.20)
-	ground.position = Vector2(0, 420)
-	ground.size = Vector2(1280, 140)
-	add_child(ground)
+	if art == null:
+		var ground: ColorRect = ColorRect.new()
+		ground.color = Color(0.13, 0.15, 0.20)
+		ground.position = Vector2(0, 420)
+		ground.size = Vector2(1280, 140)
+		add_child(ground)
 
 
 func _spawn_party(is_defeat_retry: bool) -> void:
@@ -154,8 +171,16 @@ func _on_combatant_added(combatant: BaseCombatant) -> void:
 
 func _on_boss_phase_changed(phase: int, title: String) -> void:
 	if background != null and PHASE_TINTS.has(phase):
+		var tint: Color = PHASE_TINTS[phase]
+		if background.color.a < 0.9:  # art underneath: stay translucent
+			tint = Color(tint, background.color.a)
 		var tween: Tween = create_tween()
-		tween.tween_property(background, "color", PHASE_TINTS[phase], 0.6)
+		tween.tween_property(background, "color", tint, 0.6)
+	# Optional phase-3 music shift — only if a release track actually exists.
+	if phase == 3 and AssetLibrary.music_stream("boss_release") != null:
+		var music: Node = get_node_or_null("/root/MusicManager")
+		if music != null:
+			music.play_track("boss_release")
 	var banner: Label = Label.new()
 	banner.text = "PHASE %d — %s" % [phase, title]
 	banner.add_theme_font_size_override("font_size", 34)
@@ -268,6 +293,9 @@ func _on_target_cancelled() -> void:
 func _on_battle_ended(victory: bool) -> void:
 	action_menu.close()
 	target_select.close()
+	var music: Node = get_node_or_null("/root/MusicManager")
+	if music != null and AssetLibrary.music_stream("victory" if victory else "defeat") != null:
+		music.play_track("victory" if victory else "defeat")
 	for member: BaseCombatant in party:
 		carried_meters[member.display_name] = {
 			"resolve": member.meters.resolve(),
@@ -314,6 +342,13 @@ func _show_end_overlay(victory: bool) -> void:
 		func() -> void: get_tree().change_scene_to_file("res://world/fight_select.tscn")
 	)
 	box.add_child(select)
+
+	var menu: Button = Button.new()
+	menu.text = "Main menu"
+	menu.pressed.connect(
+		func() -> void: get_tree().change_scene_to_file("res://world/main_menu.tscn")
+	)
+	box.add_child(menu)
 
 	var quit: Button = Button.new()
 	quit.text = "Quit"

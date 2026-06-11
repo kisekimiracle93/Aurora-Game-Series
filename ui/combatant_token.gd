@@ -10,11 +10,24 @@ var _body: ColorRect
 var _ring: ColorRect
 var _hp_fill: ColorRect
 var _guard_label: Label
+var _flash_target: CanvasItem
 
 
 func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1.0) -> void:
 	combatant = combatant_in
 	scale = Vector2(size_scale, size_scale)
+
+	# Real art when available (assets/sprites/characters/<name>.png), else grey-box.
+	var art: Texture2D = AssetLibrary.texture("characters", combatant.display_name)
+	var sprite: Sprite2D = null
+	if art != null:
+		sprite = Sprite2D.new()
+		sprite.texture = art
+		var height: float = float(art.get_height())
+		if height > 0.0:
+			var fit: float = (BODY_SIZE.y * 1.4) / height
+			sprite.scale = Vector2(fit, fit)
+		add_child(sprite)
 
 	_ring = ColorRect.new()
 	_ring.color = Color(1.0, 0.9, 0.2, 0.9)
@@ -27,7 +40,9 @@ func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1
 	_body.color = body_color
 	_body.size = BODY_SIZE
 	_body.position = -(BODY_SIZE / 2.0)
+	_body.visible = sprite == null  # art replaces the grey-box rect
 	add_child(_body)
+	_flash_target = sprite if sprite != null else _body
 
 	var name_label: Label = Label.new()
 	name_label.text = combatant.display_name
@@ -76,8 +91,8 @@ func _on_hp_changed(old_value: int, new_value: int) -> void:
 	_hp_fill.color = Color(0.85, 0.25, 0.2) if ratio < 0.3 else Color(0.3, 0.85, 0.35)
 	if new_value < old_value:
 		var tween: Tween = create_tween()
-		_body.modulate = Color(3.0, 3.0, 3.0)
-		tween.tween_property(_body, "modulate", Color.WHITE, 0.25)
+		_flash_target.modulate = Color(3.0, 3.0, 3.0)
+		tween.tween_property(_flash_target, "modulate", Color.WHITE, 0.25)
 
 
 func _on_died() -> void:

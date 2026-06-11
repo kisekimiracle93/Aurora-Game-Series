@@ -7,8 +7,12 @@ config_version=5
 [application]
 
 config/name="Game Aurora — Vertical Slice"
-run/main_scene="res://world/fight_select.tscn"
+run/main_scene="res://world/main_menu.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
+
+[autoload]
+
+MusicManager="*res://world/music_manager.gd"
 
 [debug]
 

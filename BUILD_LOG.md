@@ -372,3 +372,52 @@ boots clean. PLAYTEST CHECKPOINT 3 (boss verdict) still open.
 **Next discussion queued by the human:** free / AI-generated assets (3D + music)
 to dress the slice. Note the locked slice scope says grey-box 2D + CC0 sprites
 if supplied; a 3D port would be a logged deviation to decide deliberately.
+
+---
+
+## Asset pass A (human-directed) — main menu + drop-in art/music pipeline
+
+Human picked option A (2D art + music now; 3D deferred until after the slice).
+Their files live on their PC, so this pass ships the full plumbing + a
+procedural title screen; binding real art is a file-drop away (see
+ASSETS_README.md and its push loop).
+
+**Built:**
+
+- **Main menu** (`ui/main_menu.gd`, new main scene): black starfield sky under a
+  living **aurora shader** (`ui/aurora_sky.gdshader` — emerald curtains overtaken
+  by moody evil red in ~16s cycles), procedural **stormy castle silhouette**
+  (crenellated towers) with **random lightning strikes** (jagged bolt + screen
+  flash), "LIGHT'S EDGE — Part I of the Aurora Series" title treatment, and a
+  drawn FF-style emblem (pale sun ringed by twin serpents, one emerald / one
+  ember). Buttons: **Start** (→ fight select; becomes the world hub at M6),
+  **Playtest** (jump-offs: Skirmish, Boss, disabled Town/Outside/Dungeon stubs
+  awaiting M6), **Options** (master/music volume via bus, fullscreen toggle),
+  **Quit**.
+- **Asset pipeline** (`world/asset_library.gd` + `/assets` tree + ASSETS_README.md):
+  convention-over-configuration — sprites/backgrounds/music resolve by exact
+  documented paths with silent grey-box fallback. Naming: lowercase snake_case,
+  trailing instance numbers shared ("Aether Wolf 2" → aether_wolf.png).
+- **MusicManager autoload** (`world/music_manager.gd`): dedicated Music bus,
+  crossfading two-player setup, loop-enabling per stream type, same-track no-op,
+  silent no-op for missing files. Hooks: menu theme, battle/boss themes,
+  optional `boss_release` on phase 3 and victory/defeat stings (only switch if
+  the file exists, so missing tracks never kill running music).
+- **Battle scene art hooks:** backdrop art (battle.png/boss.png) with the phase
+  tint riding translucently on top so P1→P3 cues survive any art; combatant
+  tokens swap their grey rect for `assets/sprites/characters/<name>.png` when
+  present (hit-flash retargets the sprite); end overlay gains a Main Menu button;
+  fight select gains a back-to-menu button.
+
+**Test status:** `131/131 passed (957 asserts)` — headless, green; boots clean.
+New coverage: naming convention, null-fallbacks with an empty /assets tree,
+autoloaded MusicManager no-op safety + Music bus creation, main scene setting,
+menu boots with 4 buttons + closed panels, battle scene boots with asset hooks.
+
+**Deviations (logged):** main menu + options + music manager are slice-scope
+extensions requested by the human (audio guardrail "silent or stub beeps"
+remains true by default — real music only plays if the human supplies files).
+3D port explicitly deferred until after M6/M7.
+
+**Open:** waiting on the human's asset drop (Downloads → assets/ → push) to bind
+real art; icons/ and tiles/ are reserved for the M6 world + a later UI-icon pass.
