@@ -29,7 +29,12 @@ func _make_player(
 		"crit": 0,
 	}
 	data.affinities = {}
-	return autofree(BaseCombatant.from_character(data))
+	var combatant: BaseCombatant = autofree(BaseCombatant.from_character(data))
+	# Meter-neutral fixture: Duty/Burden multipliers pinned to 1.0 so the
+	# hand-computed damage expectations stay exact.
+	combatant.meters.set_value(MetersComponent.DUTY, 0.0)
+	combatant.meters.set_value(MetersComponent.BURDEN, 0.0)
+	return combatant
 
 
 func _make_enemy(hp: int = 200, affinities: Dictionary = {}) -> BaseCombatant:

@@ -58,3 +58,35 @@ static func darkness_accuracy_penalty(darkness: float) -> float:
 
 static func is_forced_ko(darkness: float) -> bool:
 	return darkness >= DARKNESS_FORCED_KO_THRESHOLD
+
+
+# --- Duty & Burden (slice-scope expansion at the owner's direction) -----------
+# GDD formulas: Duty damage 1.00-1.25, Echo CT cost down to -40%;
+# Burden damage 1.00->0.65, speed 1.00->0.55, Echo locked at >= 80.
+
+const DUTY_MIN: float = 0.0
+const DUTY_MAX: float = 100.0
+const DUTY_DEFAULT: float = 50.0
+const BURDEN_MIN: float = 0.0
+const BURDEN_MAX: float = 100.0
+const BURDEN_ECHO_LOCK: float = 80.0
+
+
+static func duty_damage_mult(duty: float) -> float:
+	return 1.0 + 0.25 * clampf(duty / DUTY_MAX, 0.0, 1.0)
+
+
+static func duty_echo_cost_mult(duty: float) -> float:
+	return 1.0 - 0.40 * clampf(duty / DUTY_MAX, 0.0, 1.0)
+
+
+static func burden_damage_mult(burden: float) -> float:
+	return 1.0 - 0.35 * clampf(burden / BURDEN_MAX, 0.0, 1.0)
+
+
+static func burden_speed_mult(burden: float) -> float:
+	return 1.0 - 0.45 * clampf(burden / BURDEN_MAX, 0.0, 1.0)
+
+
+static func is_echo_locked_by_burden(burden: float) -> bool:
+	return burden >= BURDEN_ECHO_LOCK

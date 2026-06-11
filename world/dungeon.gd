@@ -77,8 +77,10 @@ func _setup_area() -> void:
 	door_pulse.tween_property(door, "modulate:a", 1.0, 1.0)
 	add_interactable(Vector2(1180, 370), "Enter the Shepherd's arena", _on_boss_door)
 
+	add_chest("dungeon_alcove", Vector2(520, 560), {"item_hp_potion": 2, "item_aether_draught": 1})
+
 	# Back west to the fields.
-	add_exit(Rect2(0, 300, 40, 150), "res://world/outside.tscn", Vector2(1180, 370))
+	add_exit(Rect2(0, 300, 40, 150), "res://world/outside.tscn", Vector2(2400, 700))
 
 	if world != null and world.get("boss_cleared"):
 		show_dialog([

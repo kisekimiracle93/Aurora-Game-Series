@@ -75,6 +75,23 @@ static func enemy_paths_for(roster_id: String) -> Array[String]:
 			return [STAG, WOLF]
 		"dungeon_gauntlet":
 			return [WOLF, STAG, WOLF]
+		"bandit_ambush":
+			return [
+				"res://data/enemies/roadside_bandit.tres",
+				"res://data/enemies/bandit_cutthroat.tres",
+				"res://data/enemies/roadside_bandit.tres",
+			]
+		"bandit_pair":
+			return [
+				"res://data/enemies/roadside_bandit.tres",
+				"res://data/enemies/roadside_bandit.tres",
+			]
+		"wisp_pack":
+			return [
+				"res://data/enemies/frost_wisp.tres",
+				"res://data/enemies/frost_wisp.tres",
+				WOLF,
+			]
 		_:
 			return [WOLF, WOLF, STAG]  # classic wolfpack
 
@@ -143,7 +160,13 @@ func _start_battle(is_defeat_retry: bool) -> void:
 		boss_controller.phase_changed.connect(_on_boss_phase_changed)
 	var music: Node = get_node_or_null("/root/MusicManager")
 	if music != null:
-		music.play_track("boss" if roster == "boss" else "battle")
+		if roster == "boss":
+			music.play_track("boss")
+		else:
+			var pick: String = "battle"
+			if randf() < 0.5 and AssetLibrary.music_stream("battle_alt") != null:
+				pick = "battle_alt"
+			music.play_track(pick)
 	encounter.start()
 
 
@@ -299,7 +322,7 @@ func _build_ui() -> void:
 	combat_log = CombatLog.new()
 	combat_log.position = Vector2(962, 8)
 	combat_log.custom_minimum_size = Vector2(306, 140)
-	combat_log.self_modulate = Color(1, 1, 1, 0.88)
+	# stone-opaque per playtest feedback (was translucent)
 	add_child(combat_log)
 
 	hud = PartyHUD.new()
@@ -324,6 +347,27 @@ func _build_ui() -> void:
 	stage.add_child(_active_arrow)
 	_target_arrow = SelectionArrow.new(Color(0.95, 0.25, 0.2))
 	stage.add_child(_target_arrow)
+
+	# Testing hatch: end any fight instantly (no penalty, no rewards).
+	var debug_exit: Button = Button.new()
+	debug_exit.text = "✕ debug: end fight"
+	debug_exit.add_theme_font_size_override("font_size", 11)
+	debug_exit.modulate = Color(1, 1, 1, 0.6)
+	debug_exit.position = Vector2(1140, 690)
+	debug_exit.pressed.connect(_on_debug_exit)
+	add_child(debug_exit)
+
+
+func _on_debug_exit() -> void:
+	if presenter != null:
+		presenter.reset_time_scale()
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world_mode and world != null:
+		world.snapshot_party(party)
+		if world.return_scene != "":
+			get_tree().change_scene_to_file(world.return_scene)
+			return
+	get_tree().change_scene_to_file("res://world/fight_select.tscn")
 
 
 ## Bottom-anchor a menu just above the party HUD so it never covers the panels.
@@ -418,7 +462,13 @@ func _on_action_feedback(
 		BattleFX.heal_sparkle(stage, actor.position, Color(1.0, 0.98, 0.85))
 		_sfx("pray")
 		return
+	if ability.is_item:
+		var world_items: Node = get_node_or_null("/root/WorldState")
+		if world_items != null:
+			world_items.consume_item(ability.id)
+		_sfx("heal")
 	if ability.ability_type == "echo":
+		_sfx(ability.id)
 		_sfx("echo")
 	if ability.darkness_cost > 0:
 		BattleFX.elemental_burst(stage, actor.position, "Dark")
@@ -441,14 +491,15 @@ func _on_action_feedback(
 		if int(result["damage"]) > 0:
 			if ability.ability_type == "echo":
 				BattleFX.echo_burst(stage, target.position, ability.element)
+				BattleFX.spell_cinematic(stage, actor.position, target.position, ability.element, true)
 			elif ability.damage_type == "physical":
 				BattleFX.slash(stage, target.position)
 				BattleFX.blood_spray(stage, target.position, bool(result["crit"]))
 				if ability.element != "Neutral":
-					BattleFX.elemental_burst(stage, target.position, ability.element)
+					BattleFX.spell_cinematic(stage, actor.position, target.position, ability.element)
 			else:
-				BattleFX.elemental_burst(stage, target.position, ability.element)
-			BattleFX.shake(target)
+				BattleFX.spell_cinematic(stage, actor.position, target.position, ability.element)
+			BattleFX.shake(target, 10.0)
 			if not target.is_alive():
 				BattleFX.blood_pool(stage, target.position)
 			if bool(result["crit"]):
@@ -457,7 +508,7 @@ func _on_action_feedback(
 				if bool(result["crit"]):
 					_sfx("crit")
 				elif ability.damage_type == "magic":
-					_sfx("fire" if ability.element == "Fire" else "ice")
+					_sfx(ability.id)
 				else:
 					_sfx("hit")
 				impact_played = true

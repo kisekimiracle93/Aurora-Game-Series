@@ -59,6 +59,8 @@ func _build_panel(member: BaseCombatant) -> Dictionary:
 	controls["hp"] = _add_bar(box, "HP", Color(0.3, 0.85, 0.35))
 	controls["aether"] = _add_bar(box, "AE", Color(0.35, 0.55, 1.0))
 	controls["resolve"] = _add_bar(box, "RES", Color(0.85, 0.85, 0.85))
+	controls["duty"] = _add_bar(box, "DUTY", Color(0.95, 0.78, 0.3))
+	controls["burden"] = _add_bar(box, "BUR", Color(0.6, 0.45, 0.4))
 	if member.is_heir():
 		controls["darkness"] = _add_bar(box, "DRK", Color(0.65, 0.3, 0.9))
 	controls["echo"] = _add_bar(box, "ECHO", Color(0.3, 0.9, 0.95))
@@ -100,6 +102,8 @@ func _refresh(member: BaseCombatant) -> void:
 	_set_bar(controls["hp"], member.stats.current_hp, member.stats.max_hp(), true)
 	_set_bar(controls["aether"], member.stats.current_aether, member.stats.max_aether(), true)
 	_set_bar(controls["resolve"], int(member.meters.resolve()), int(MeterMath.RESOLVE_MAX), true)
+	_set_bar(controls["duty"], int(member.meters.duty()), int(MeterMath.DUTY_MAX), false)
+	_set_bar(controls["burden"], int(member.meters.burden()), int(MeterMath.BURDEN_MAX), false)
 	var resolve_bar: ProgressBar = controls["resolve"]["bar"]
 	var fill_style: StyleBoxFlat = resolve_bar.get_theme_stylebox("fill")
 	fill_style.bg_color = BAND_COLORS[band]

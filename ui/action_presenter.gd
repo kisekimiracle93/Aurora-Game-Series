@@ -15,12 +15,12 @@ const ECHO_TIME_SCALE: float = 0.55
 
 ## seconds: [windup_hold, follow_hold]
 const PACING: Dictionary = {
-	"basic": [0.55, 0.65],
-	"skill": [0.85, 0.95],
-	"spell": [0.95, 1.05],
-	"support": [0.7, 0.7],
-	"echo": [1.7, 2.1],
-	"brace": [0.45, 0.5],
+	"basic": [0.7, 0.85],
+	"skill": [1.05, 1.2],
+	"spell": [1.3, 1.4],
+	"support": [0.9, 0.85],
+	"echo": [2.1, 2.6],
+	"brace": [0.5, 0.55],
 }
 
 var stage: Node2D  # the world layer that shakes
@@ -82,7 +82,7 @@ func present_windup(actor: BaseCombatant, ability: AbilityData) -> void:
 		BattleFX.echo_burst(stage, actor.position, ability.element)
 		_flash_screen(Color(1.0, 0.97, 0.85), 0.22)
 	elif ability.ability_type == "spell" or ability.darkness_cost > 0:
-		BattleFX.elemental_burst(
+		BattleFX.caster_aura(
 			stage, actor.position, "Dark" if ability.darkness_cost > 0 else ability.element
 		)
 
@@ -99,7 +99,7 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 	# the heavy stuff rattles it a lot.
 	if not braces and ability.damage_type != "none":
 		var heavy: bool = ability.coeff >= 2.2 or ability.ability_type == "echo"
-		shake_stage(10.0 if heavy else 5.0)
+		shake_stage(14.0 if heavy else 7.0)
 		_flash_screen(_element_tint(ability.element), 0.16 if heavy else 0.10)
 		if heavy:
 			_x_slash_screen()

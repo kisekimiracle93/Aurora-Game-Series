@@ -60,6 +60,8 @@ static func from_character(data: CharacterData) -> BaseCombatant:
 	combatant.stats.setup(data.base_stats, data.affinities)
 	combatant.meters.register_resolve()
 	combatant.meters.register_echo()
+	combatant.meters.register_duty()
+	combatant.meters.register_burden()
 	if data.is_heir:
 		combatant.meters.register_darkness()
 	combatant.ctb.setup(float(combatant.stats.get_stat("speed")))
@@ -108,11 +110,23 @@ func darkness_for_math() -> float:
 	return 0.0
 
 
+## Enemies carry no Duty/Burden: both read as their neutral multipliers.
+func duty_for_math() -> float:
+	return meters.duty() if meters.has_meter(MetersComponent.DUTY) else 0.0
+
+
+func burden_for_math() -> float:
+	return meters.burden() if meters.has_meter(MetersComponent.BURDEN) else 0.0
+
+
 func effective_speed() -> float:
 	var darkness_bonus: float = 1.0
 	if has_darkness_speed_passive:
 		darkness_bonus = CTBMath.darkness_speed_bonus(darkness_for_math())
-	return ctb.effective_speed(resolve_for_math(), status.speed_mult(), darkness_bonus)
+	var burden_drag: float = MeterMath.burden_speed_mult(burden_for_math())
+	return ctb.effective_speed(
+		resolve_for_math(), status.speed_mult(), darkness_bonus * burden_drag
+	)
 
 
 ## Accuracy after status debuffs and Darkness degradation.

@@ -58,6 +58,12 @@ static func _resolve_on_target(
 		if bool(result["reflected"]) or not target.is_alive():
 			return result  # no riders through a mirror or onto the slain
 
+	if ability.flat_heal > 0:
+		target.stats.heal(ability.flat_heal)
+		result["healed"] = int(result["healed"]) + ability.flat_heal
+	if ability.flat_aether > 0:
+		target.stats.restore_aether(ability.flat_aether)
+
 	if ability.heals:
 		var heal_amount: int = int(
 			round(
@@ -90,9 +96,12 @@ static func _apply_damage(
 	result: Dictionary
 ) -> void:
 	var emod: float = DamageMath.element_mod(target.stats.affinity_for(ability.element))
-	## ferocity is the enemy offense bias (players: 1.0) layered like Resolve.
+	## Layered like the plan's LayerMod: Resolve x Darkness, now x Duty x Burden
+	## (owner-directed expansion); ferocity is the enemy offense bias (players 1.0).
 	var lmod: float = (
 		DamageMath.layer_mod(actor.resolve_for_math(), actor.darkness_for_math())
+		* MeterMath.duty_damage_mult(actor.duty_for_math())
+		* MeterMath.burden_damage_mult(actor.burden_for_math())
 		* actor.ferocity
 	)
 	var variance: float = rng.randf_range(DamageMath.RANDOM_MIN, DamageMath.RANDOM_MAX)

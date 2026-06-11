@@ -51,9 +51,49 @@ func _stream_for(sfx_name: String) -> AudioStream:
 	return stream
 
 
-## Recipe book: every combat/UI event has a synthesized voice.
+## Recipe book: every combat/UI event has a synthesized voice — and every
+## named spell gets its own (replace any of them with a file of the same name).
 static func synth_stream(sfx_name: String) -> AudioStreamWAV:
 	match sfx_name:
+		"aetherflare":
+			return _mix([_sweep(300.0, 950.0, 0.3, 0.25, "saw"), _noise_burst(0.34, 0.3, 28.0)])
+		"scorchstep":
+			return _mix([_sweep(900.0, 400.0, 0.16, 0.25, "saw"), _noise_burst(0.1, 0.3, 70.0)])
+		"oathfire_strike":
+			return _mix([_noise_burst(0.2, 0.5, 40.0), _tone([[240.0, 0.2]], 0.35, "square")])
+		"rime_rend":
+			return _mix([
+				_noise_burst(0.1, 0.45, 80.0),
+				_tone([[2100.0, 0.06], [2800.0, 0.1]], 0.22, "sine"),
+			])
+		"absolute_zero":
+			return _mix([
+				_sweep(420.0, 70.0, 0.5, 0.3, "sine"),
+				_tone([[2400.0, 0.08], [3000.0, 0.08], [3600.0, 0.12]], 0.18, "sine"),
+			])
+		"hymn_of_snowfall":
+			return _tone([[880.0, 0.12], [1100.0, 0.12], [1320.0, 0.18]], 0.2, "sine")
+		"glacial_benediction":
+			return _tone([[523.0, 0.14], [659.0, 0.14], [784.0, 0.2]], 0.22, "sine")
+		"wisp_bolt":
+			return _sweep(1600.0, 2400.0, 0.14, 0.2, "sine")
+		"glacial_rake":
+			return _mix([_noise_burst(0.16, 0.5, 50.0), _sweep(500.0, 180.0, 0.2, 0.25, "saw")])
+		"echo_living_pyre":
+			return _mix([_sweep(150.0, 900.0, 0.6, 0.3, "saw"), _noise_burst(0.6, 0.25, 12.0)])
+		"echo_trial_by_fire":
+			return _mix([_sweep(200.0, 1100.0, 0.55, 0.3, "saw"), _noise_burst(0.5, 0.3, 16.0)])
+		"echo_throne_of_winter":
+			return _mix([
+				_sweep(800.0, 90.0, 0.7, 0.3, "sine"),
+				_tone([[2400.0, 0.1], [3200.0, 0.1], [4000.0, 0.16]], 0.18, "sine"),
+			])
+		"echo_last_snow":
+			return _tone(
+				[[523.0, 0.16], [659.0, 0.16], [784.0, 0.16], [1046.0, 0.24]], 0.22, "sine"
+			)
+		"cutpurse_slash", "warning_shot":
+			return _noise_burst(0.09, 0.45, 95.0)
 		"hover":
 			return _tone([[900.0, 0.030]], 0.18, "sine")
 		"click":

@@ -576,3 +576,69 @@ a world-mode battle honoring meters + merc flag + roster.
 5. Lose on purpose: Retry (−15 Resolve) and Limp-back-to-town both behave?
 6. The cinematic layer: strides, stone declarations, X-slash, blood — grand
    without dragging? (Pacing knobs: `ActionPresenter.PACING`.)
+
+---
+
+## Expansion pass (owner-directed) — world depth, anime FX, Duty & Burden
+
+Post-checkpoint-4 feedback build. Two explicit scope expansions ordered by the
+owner and logged as deviations: **Duty & Burden meters** (plan deferred them;
+GDD formulas used) and **consumable items** (HP/Aether potions). The sphere
+grid remains OUT (no leveling system exists; EXP potions skipped as inert).
+
+**Combat/system side:**
+- **Duty & Burden live**: registered persistent meters on all party members
+  (duty default 50, burden 0). Effects per GDD: damage ×1.00–1.25 by Duty,
+  ×1.00→0.65 by Burden (both folded into LayerMod), speed ×1.00→0.55 by
+  Burden, **Echo locked at Burden ≥80**, **Echo CT cost −40% at Duty 100**.
+  Ally death: +10 Burden to survivors. Save-crystal rest eases Burden −15.
+  Quests/dialogue nudge all four meters via `WorldState.adjust_party_meter`
+  (Darkness only ever touches the Heirs). HUD shows DUTY (gold) + BUR rows.
+- **Items**: `is_item`/`flat_heal`/`flat_aether` on AbilityData; HP Potion
+  (120 HP) + Aether Draught (45 AE) as Item-cost (750 CT) actions in the
+  battle menu (world runs), consumed from `WorldState.inventory`, persisted
+  in saves with opened chests; starting kit 2+1.
+- **Battle-start reactions** (enemy-type triggers): wolves shake Mati
+  (Resolve −10), bandits steel Bastil (Duty +10), the Stag stirs Jecht's
+  blood (Darkness +5) — logged lines + HUD movement.
+- **New foes**: Roadside Bandit + Bandit Cutthroat (magicless raiders, bleed/
+  delay kits, hero-sheet sprites) and Frost Wisp (fragile ice caster, DCSS
+  wisp tile). New rosters: bandit_pair/bandit_ambush/wisp_pack.
+- **Anime-scale magic staging** (`BattleFX.spell_cinematic`): additive-blend
+  light layering — caster aura motes, a descending sky pillar of the element,
+  expanding ground rings under the target, and a 70–110-mote storm; echoes get
+  the big variant. Pacing slowed further (spells ~3.7s, echoes ~6s+slow-mo),
+  shakes strengthened. **Per-spell synthesized sounds** for every named spell/
+  echo (file-overridable by id, e.g. assets/audio/sfx/absolute_zero.ogg).
+- **Stone UI**: all panels (log, timeline, HUD, menus, dialogs) now wear an
+  opaque tiled cobblestone slab cropped from the toolbox cave terrain;
+  Kenney buttons ride on top. Combat log opaque per feedback.
+- **Debug exit** button in every battle (instant leave, no penalty/rewards).
+- **Varied music**: skirmishes randomly pick battle / battle_alt (Redletter).
+
+**World side:**
+- **Scrolling maps + follow camera** (UI on a CanvasLayer). Town 1920×1280,
+  fields 2560×1600.
+- **Aethertown rebuilt with toolbox art**: tiled grass, dirt avenues, pine
+  breaks, sprite houses (inn + tall homes), **two enterable homes** with
+  furnished interiors + occupants, **Mercenary Post interior where the Lancer
+  is actually hired/dismissed via choices**, shop stall stub, save crystal,
+  3 roaming villagers with one-liner pools ("Move along, kid", the cat lady),
+  **three choice-quests** that move the meters (the Letter, the Smuggler, the
+  Festival Lie — each one-shot per run, gold "?" markers).
+- **Crystal Fields rebuilt**: snow cliffs crowning the north, pine woods,
+  scattered rocks/icicles, a **frozen river fed by a particle waterfall with
+  mist pool**, and **7 visible patrolling foes** (wolves/stag/bandits/wisps)
+  with aggro radius 185 / leash 360 — chase, give up, walk home; "!" + sting
+  on aggro; defeated foes stay gone for the run. **Random encounters removed.**
+- Treasure chests (toolbox crate sprite): 2 town, 2 fields, 1 dungeon —
+  open once per run, loot persisted.
+
+**Test status:** `157/157 passed (1141 asserts)`; boots clean. New coverage:
+duty/burden curves + speed drag + echo lock/discount, flat-restore items +
+inventory + save round-trip (incl. duty/burden/chests), wolf/bandit reactions,
+foe state machine (aggro/leash/return/resume), quest nudges (heir-only
+darkness, clamping), new enemy/roster files.
+
+**Numbers I chose (tunable):** duty/burden deltas above; foe aggro 185 / leash
+360; potion 120 HP / draught 45 AE; starting kit 2/1; burden relief 15/rest.

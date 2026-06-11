@@ -34,6 +34,23 @@ func open_for(actor: BaseCombatant) -> void:
 			_add_button(actor, skill)
 	for echo: AbilityData in actor.abilities.get_echoes():
 		_add_button(actor, echo, not actor.meters.echo_ready())
+	# Consumables (world runs only — stock lives in WorldState).
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null and world.in_world_run:
+		for item_id: String in ["item_hp_potion", "item_aether_draught"]:
+			var count: int = world.item_count(item_id)
+			if count <= 0:
+				continue
+			var item: AbilityData = AbilityLibrary.load_ability(item_id)
+			if item == null:
+				continue
+			var button: Button = Button.new()
+			button.text = "%s  ×%d" % [item.display_name, count]
+			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			button.pressed.connect(func() -> void: ability_chosen.emit(item))
+			button.mouse_entered.connect(func() -> void: button_hovered.emit())
+			button.focus_entered.connect(func() -> void: button_hovered.emit())
+			_box.add_child(button)
 	var guard: AbilityData = actor.abilities.find_by_id("guard")
 	if guard != null:
 		_add_button(actor, guard)

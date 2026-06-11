@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemydata"]
+
+[resource]
+script = ExtResource("1_enemydata")
+name = "Bandit Cutthroat"
+class_type = "Aetherion"
+element = "Neutral"
+is_heir = false
+base_stats = {
+"accuracy": 92,
+"aether": 0,
+"crit": 10,
+"evasion": 11,
+"focus": 14,
+"guard": 17,
+"hp": 175,
+"power": 30,
+"speed": 29,
+"ward": 14
+}
+affinities = {
+"Fire": "neutral",
+"Ice": "neutral"
+}
+ability_ids = Array[String](["attack_basic", "cutpurse_slash", "warning_shot"])
+ferocity = 1.1
+stability = 0.1
+ai_profile = "priority"
+accumulates_delay_resistance = false

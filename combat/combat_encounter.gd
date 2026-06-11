@@ -21,6 +21,7 @@ const MAX_AUTO_STEPS: int = 10000
 ## Feel knobs (tunable; see BUILD_LOG.md).
 const RESOLVE_ALLY_DEATH_DROP: float = 20.0
 const RESOLVE_VICTORY_GAIN: float = 10.0
+const BURDEN_ALLY_DEATH_GAIN: float = 10.0
 const FROZEN_TURN_COST: int = CTBMath.COST_NORMAL
 
 var party: Array[BaseCombatant] = []
@@ -52,8 +53,50 @@ func setup(
 func start() -> void:
 	state = State.IDLE
 	_log("Battle start!")
+	_apply_battle_start_reactions()
 	_emit_timeline()
 	advance_until_input()
+
+
+## Enemy-type triggers (GDD): certain foes shake or steel certain hearts.
+const REACTIONS: Array[Dictionary] = [
+	{
+		"member": "Mati", "enemy_contains": "Wolf",
+		"meter": MetersComponent.RESOLVE, "delta": -10.0,
+		"line": "Mati falters — she has feared the wolves since the village burned. (Resolve -10)",
+	},
+	{
+		"member": "Bastil", "enemy_contains": "Bandit",
+		"meter": MetersComponent.DUTY, "delta": 10.0,
+		"line": "Bastil squares his shoulders — these roads are his to keep. (Duty +10)",
+	},
+	{
+		"member": "Jecht", "enemy_contains": "Stag",
+		"meter": MetersComponent.DARKNESS, "delta": 5.0,
+		"line": "The Stag's hunt stirs something cold in Jecht's blood. (Darkness +5)",
+	},
+]
+
+
+func _apply_battle_start_reactions() -> void:
+	for reaction: Dictionary in REACTIONS:
+		var member: BaseCombatant = null
+		for candidate: BaseCombatant in party:
+			if candidate.display_name == String(reaction["member"]):
+				member = candidate
+		if member == null or not member.is_alive():
+			continue
+		var triggered: bool = false
+		for enemy: BaseCombatant in enemies:
+			if enemy.display_name.contains(String(reaction["enemy_contains"])):
+				triggered = true
+		if not triggered:
+			continue
+		var meter_id: StringName = reaction["meter"]
+		if meter_id == MetersComponent.DARKNESS and not member.is_heir():
+			continue
+		member.meters.add(meter_id, float(reaction["delta"]))
+		_log(String(reaction["line"]))
 
 
 func register_boss_controller(controller: Node) -> void:
@@ -127,6 +170,11 @@ func submit_player_action(ability: AbilityData, targets: Array[BaseCombatant]) -
 		return  # stays AWAITING_PLAYER; UI should grey these out
 	if ability.ability_type == "echo" and not current_actor.meters.echo_ready():
 		_log("%s's Echo gauge is not full." % current_actor.display_name)
+		return
+	if ability.ability_type == "echo" and MeterMath.is_echo_locked_by_burden(
+		current_actor.burden_for_math()
+	):
+		_log("%s's grief is too heavy — the Echo will not answer." % current_actor.display_name)
 		return
 	state = State.RESOLVING
 	if presenter != null:
@@ -234,7 +282,10 @@ func _execute(actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCom
 		_log_results(actor, ability, results)
 	actor.add_darkness(float(ability.darkness_cost))
 	action_resolved.emit(actor, ability, results)
-	actor.ctb.pay_action_cost(ability.ct_cost)
+	var ct_cost: int = ability.ct_cost
+	if ability.ability_type == "echo":  # conviction makes the deed cheaper
+		ct_cost = int(round(ct_cost * MeterMath.duty_echo_cost_mult(actor.duty_for_math())))
+	actor.ctb.pay_action_cost(ct_cost)
 	_emit_timeline()
 	_check_end()
 
@@ -257,6 +308,7 @@ func _on_combatant_died(combatant: BaseCombatant) -> void:
 	if party.has(combatant):
 		for ally: BaseCombatant in living(party):
 			ally.meters.add(MetersComponent.RESOLVE, -RESOLVE_ALLY_DEATH_DROP)
+			ally.meters.add(MetersComponent.BURDEN, BURDEN_ALLY_DEATH_GAIN)
 
 
 func _check_end() -> bool:

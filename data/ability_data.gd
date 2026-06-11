@@ -22,3 +22,7 @@ extends Resource
 @export var heals: bool = false
 ## Resolve restored to the target on a landed/support use (Rally-type abilities).
 @export var resolve_gain: int = 0
+## Consumable items: fixed restoration amounts + inventory consumption flag.
+@export var is_item: bool = false
+@export var flat_heal: int = 0
+@export var flat_aether: int = 0

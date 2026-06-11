@@ -9,6 +9,8 @@ signal meter_changed(meter_id: StringName, old_value: float, new_value: float)
 const RESOLVE: StringName = &"resolve"
 const DARKNESS: StringName = &"darkness"
 const ECHO: StringName = &"echo"
+const DUTY: StringName = &"duty"
+const BURDEN: StringName = &"burden"
 
 ## meter_id -> {"value": float, "min": float, "max": float, "persistent": bool}
 var _meters: Dictionary = {}
@@ -75,6 +77,22 @@ func register_resolve(default_value: float = MeterMath.RESOLVE_DEFAULT) -> void:
 
 func register_darkness(default_value: float = 0.0) -> void:
 	register_meter(DARKNESS, MeterMath.DARKNESS_MIN, MeterMath.DARKNESS_MAX, default_value, true)
+
+
+func register_duty(default_value: float = MeterMath.DUTY_DEFAULT) -> void:
+	register_meter(DUTY, MeterMath.DUTY_MIN, MeterMath.DUTY_MAX, default_value, true)
+
+
+func register_burden(default_value: float = 0.0) -> void:
+	register_meter(BURDEN, MeterMath.BURDEN_MIN, MeterMath.BURDEN_MAX, default_value, true)
+
+
+func duty() -> float:
+	return get_value(DUTY)
+
+
+func burden() -> float:
+	return get_value(BURDEN)
 
 
 ## Echo gauge is battle-scoped: not persistent, resets via set_value at battle start.

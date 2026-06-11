@@ -15,12 +15,16 @@ func _ready() -> void:
 		get_window().theme = theme
 
 
+const STONE_PANEL: String = "res://assets/sprites/ui/stone_panel.png"
+
+
 static func build_theme() -> Theme:
 	if not ResourceLoader.exists(UI_DIR + "panel_brown.png"):
 		return null
 	var theme: Theme = Theme.new()
 
-	theme.set_stylebox("panel", "PanelContainer", _nine_patch("panel_brown.png", 12, 8))
+	# Ancient-stone panels everywhere (opaque, tiled cobble), Kenney buttons on top.
+	theme.set_stylebox("panel", "PanelContainer", _stone_panel())
 
 	theme.set_stylebox("normal", "Button", _nine_patch("buttonLong_beige.png", 10, 6))
 	theme.set_stylebox("hover", "Button", _nine_patch("buttonLong_blue.png", 10, 6))
@@ -35,6 +39,21 @@ static func build_theme() -> Theme:
 
 	theme.set_stylebox("background", "ProgressBar", _nine_patch("barBack_horizontalMid.png", 5, 3))
 	return theme
+
+
+## Old cobblestone slab: tiled texture, dark edge inset, fully opaque.
+static func _stone_panel() -> StyleBox:
+	if not ResourceLoader.exists(STONE_PANEL):
+		return _nine_patch("panel_brown.png", 12, 8)
+	var box: StyleBoxTexture = StyleBoxTexture.new()
+	box.texture = load(STONE_PANEL)
+	box.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	box.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	box.modulate_color = Color(0.85, 0.85, 0.9)
+	for side: Side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+		box.set_texture_margin(side, 8.0)
+		box.set_content_margin(side, 10.0)
+	return box
 
 
 static func _nine_patch(file_name: String, margin: int, content_margin: int) -> StyleBoxTexture:

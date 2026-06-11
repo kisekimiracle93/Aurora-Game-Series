@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemydata"]
+
+[resource]
+script = ExtResource("1_enemydata")
+name = "Roadside Bandit"
+class_type = "Aetherion"
+element = "Neutral"
+is_heir = false
+base_stats = {
+"accuracy": 89,
+"aether": 0,
+"crit": 7,
+"evasion": 9,
+"focus": 12,
+"guard": 15,
+"hp": 140,
+"power": 27,
+"speed": 27,
+"ward": 12
+}
+affinities = {
+"Fire": "neutral",
+"Ice": "neutral"
+}
+ability_ids = Array[String](["attack_basic", "cutpurse_slash"])
+ferocity = 1.0
+stability = 0.0
+ai_profile = "priority"
+accumulates_delay_resistance = false
