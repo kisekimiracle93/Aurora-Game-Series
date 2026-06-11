@@ -3,6 +3,7 @@ extends PanelContainer
 ## Pick a target for the pending ability (or go back to the action menu).
 
 signal target_chosen(target: BaseCombatant)
+signal target_hovered(target: BaseCombatant)
 signal cancelled
 
 var _box: VBoxContainer
@@ -29,6 +30,8 @@ func open_for(candidates: Array[BaseCombatant]) -> void:
 		button.text = candidate.display_name + hp_tag
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.pressed.connect(func() -> void: target_chosen.emit(candidate))
+		button.mouse_entered.connect(func() -> void: target_hovered.emit(candidate))
+		button.focus_entered.connect(func() -> void: target_hovered.emit(candidate))
 		_box.add_child(button)
 		if first == null:
 			first = button

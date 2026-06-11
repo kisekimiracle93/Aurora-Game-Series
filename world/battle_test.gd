@@ -51,6 +51,8 @@ var carried_meters: Dictionary = {}
 var background: ColorRect
 var boss_controller: FrozenShepherdController
 var _add_slot: int = 0
+var _active_arrow: SelectionArrow
+var _target_arrow: SelectionArrow
 
 
 func _ready() -> void:
@@ -85,6 +87,7 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	encounter.player_turn_started.connect(_on_player_turn)
 	encounter.battle_ended.connect(_on_battle_ended)
 	encounter.combatant_added.connect(_on_combatant_added)
+	encounter.action_resolved.connect(_on_action_feedback)
 	if boss_controller != null:
 		encounter.register_boss_controller(boss_controller)
 		boss_controller.phase_changed.connect(_on_boss_phase_changed)
@@ -121,12 +124,22 @@ func _build_battlefield() -> void:
 		add_child(ground)
 
 
+## FFX-style staggered ranks: melee-forward, casters back, merc in the rear.
+const PARTY_SLOTS: Array[Vector2] = [
+	Vector2(330, 150), Vector2(285, 235), Vector2(330, 320),
+	Vector2(285, 405), Vector2(330, 480),
+]
+const ENEMY_SLOTS: Array[Vector2] = [
+	Vector2(930, 170), Vector2(990, 310), Vector2(930, 450),
+]
+
+
 func _spawn_party(is_defeat_retry: bool) -> void:
 	for i: int in range(PARTY_PATHS.size()):
 		var data: CharacterData = load(PARTY_PATHS[i])
 		var member: BaseCombatant = BaseCombatant.from_character(data)
 		_apply_carried_meters(member, is_defeat_retry)
-		member.position = Vector2(300, 100 + i * 82)
+		member.position = PARTY_SLOTS[i % PARTY_SLOTS.size()]
 		add_child(member)
 		party.append(member)
 		var color: Color = PARTY_COLOR
@@ -145,7 +158,7 @@ func _spawn_enemies() -> void:
 		name_counts[data.name] = int(name_counts.get(data.name, 0)) + 1
 		if int(name_counts[data.name]) > 1 or ENEMY_PATHS.count(ENEMY_PATHS[i]) > 1:
 			enemy.display_name = "%s %d" % [data.name, name_counts[data.name]]
-		enemy.position = Vector2(950, 140 + i * 105)
+		enemy.position = ENEMY_SLOTS[i % ENEMY_SLOTS.size()]
 		add_child(enemy)
 		enemies.append(enemy)
 		_add_token(enemy, ENEMY_COLOR)
@@ -154,7 +167,7 @@ func _spawn_enemies() -> void:
 func _spawn_boss() -> void:
 	var data: EnemyData = load(BOSS_PATH)
 	var boss: BaseCombatant = BaseCombatant.from_enemy(data)
-	boss.position = Vector2(960, 250)
+	boss.position = Vector2(950, 300)
 	add_child(boss)
 	enemies.append(boss)
 	_add_token(boss, BOSS_COLOR, 1.7)
@@ -164,7 +177,7 @@ func _spawn_boss() -> void:
 
 ## Mid-fight reinforcements (Crystal Wolves) get tokens beside the boss.
 func _on_combatant_added(combatant: BaseCombatant) -> void:
-	combatant.position = Vector2(1120, 170 + _add_slot * 190)
+	combatant.position = Vector2(1120, 180 + _add_slot * 240)
 	_add_slot += 1
 	add_child(combatant)
 	_add_token(combatant, ENEMY_COLOR)
@@ -201,6 +214,8 @@ func _add_token(combatant: BaseCombatant, color: Color, size_scale: float = 1.0)
 	combatant.add_child(token)
 	token.setup(combatant, color, size_scale)
 	tokens[combatant] = token
+	combatant.stats.hp_changed.connect(_on_combatant_hp_changed.bind(combatant))
+	combatant.status.status_ticked.connect(_on_status_ticked.bind(combatant))
 
 
 func _apply_carried_meters(member: BaseCombatant, is_defeat_retry: bool) -> void:
@@ -239,6 +254,13 @@ func _build_ui() -> void:
 	add_child(target_select)
 	target_select.target_chosen.connect(_on_target_chosen)
 	target_select.cancelled.connect(_on_target_cancelled)
+	target_select.target_hovered.connect(_on_target_hovered)
+	action_menu.button_hovered.connect(func() -> void: _sfx("hover"))
+
+	_active_arrow = SelectionArrow.new(Color(1.0, 0.85, 0.2))
+	add_child(_active_arrow)
+	_target_arrow = SelectionArrow.new(Color(0.95, 0.25, 0.2))
+	add_child(_target_arrow)
 
 
 ## Bottom-anchor a menu just above the party HUD so it never covers the panels.
@@ -252,18 +274,22 @@ func _place_menu_above_hud(menu: Control) -> void:
 
 
 func _on_turn_started(actor: BaseCombatant) -> void:
-	for combatant: BaseCombatant in tokens:
-		(tokens[combatant] as CombatantToken).set_highlighted(combatant == actor)
+	if actor.is_player_controlled:
+		_active_arrow.point_at(actor.position)
+	else:
+		_active_arrow.hide_arrow()
 	hud.set_active(actor if actor.is_player_controlled else null)
 
 
 func _on_player_turn(actor: BaseCombatant) -> void:
 	target_select.close()
+	_target_arrow.hide_arrow()
 	action_menu.open_for(actor)
 	_place_menu_above_hud.call_deferred(action_menu)
 
 
 func _on_ability_chosen(ability: AbilityData) -> void:
+	_sfx("click")
 	pending_ability = ability
 	action_menu.close()
 	if ability.targeting == "self":
@@ -280,15 +306,128 @@ func _on_ability_chosen(ability: AbilityData) -> void:
 	_place_menu_above_hud.call_deferred(target_select)
 
 
+func _on_target_hovered(target: BaseCombatant) -> void:
+	_sfx("hover")
+	_target_arrow.point_at(target.position)
+
+
 func _on_target_chosen(target: BaseCombatant) -> void:
+	_sfx("click")
 	target_select.close()
+	_target_arrow.hide_arrow()
 	encounter.submit_player_action(pending_ability, [target])
 
 
 func _on_target_cancelled() -> void:
+	_sfx("click")
 	target_select.close()
+	_target_arrow.hide_arrow()
 	action_menu.open_for(encounter.current_actor)
 	_place_menu_above_hud.call_deferred(action_menu)
+
+
+func _sfx(sfx_name: String) -> void:
+	var sfx: Node = get_node_or_null("/root/SfxManager")
+	if sfx != null:
+		sfx.play(sfx_name)
+
+
+# --- combat feedback: FX + SFX per resolved action ------------------------------
+
+const STATUS_POP_COLORS: Dictionary = {
+	"freeze": Color(0.6, 0.9, 1.0),
+	"burn": Color(1.0, 0.55, 0.2),
+	"slow": Color(0.5, 0.65, 1.0),
+	"silence": Color(0.75, 0.75, 0.75),
+	"bleed": Color(1.0, 0.35, 0.3),
+	"resolve_shock": Color(0.8, 0.4, 1.0),
+}
+
+
+func _on_action_feedback(
+	actor: BaseCombatant, ability: AbilityData, results: Array[Dictionary]
+) -> void:
+	if ability.id == "guard":
+		BattleFX.guard_ring(self, actor.position)
+		_sfx("guard")
+		return
+	if ability.id == "pray":
+		BattleFX.heal_sparkle(self, actor.position, Color(1.0, 0.98, 0.85))
+		_sfx("pray")
+		return
+	if ability.ability_type == "echo":
+		_sfx("echo")
+	if ability.darkness_cost > 0:
+		BattleFX.elemental_burst(self, actor.position, "Dark")
+
+	var impact_played: bool = false
+	for result: Dictionary in results:
+		var target: BaseCombatant = result["target"]
+		if bool(result["missed"]):
+			BattleFX.text_pop(self, target.position, "MISS", Color(0.8, 0.8, 0.8))
+			if not impact_played:
+				_sfx("miss")
+				impact_played = true
+			continue
+		if bool(result.get("reflected", false)):
+			BattleFX.text_pop(self, actor.position, "REFLECTED!", Color(0.6, 0.95, 1.0))
+			BattleFX.elemental_burst(self, actor.position, "Ice")
+			_sfx("shock")
+			impact_played = true
+			continue
+		if int(result["damage"]) > 0:
+			if ability.ability_type == "echo":
+				BattleFX.echo_burst(self, target.position, ability.element)
+			elif ability.damage_type == "physical":
+				BattleFX.slash(self, target.position)
+				if ability.element != "Neutral":
+					BattleFX.elemental_burst(self, target.position, ability.element)
+			else:
+				BattleFX.elemental_burst(self, target.position, ability.element)
+			BattleFX.shake(target)
+			if bool(result["crit"]):
+				BattleFX.text_pop(self, target.position, "CRITICAL!", Color(1.0, 0.85, 0.25))
+			if not impact_played:
+				if bool(result["crit"]):
+					_sfx("crit")
+				elif ability.damage_type == "magic":
+					_sfx("fire" if ability.element == "Fire" else "ice")
+				else:
+					_sfx("hit")
+				impact_played = true
+		if int(result["healed"]) > 0:
+			BattleFX.heal_sparkle(self, target.position)
+			if not impact_played:
+				_sfx("heal")
+				impact_played = true
+		var applied: Array[String] = result["statuses_applied"]
+		for status_id: String in applied:
+			BattleFX.text_pop(
+				self, target.position,
+				status_id.to_upper().replace("_", " "),
+				STATUS_POP_COLORS.get(status_id, Color.WHITE)
+			)
+			_sfx("shock" if status_id == "resolve_shock" else "status")
+		if bool(result["delayed"]):
+			BattleFX.text_pop(self, target.position, "DELAYED", Color(0.7, 0.8, 1.0))
+			_sfx("delay")
+
+
+func _on_combatant_hp_changed(old_value: int, new_value: int, combatant: BaseCombatant) -> void:
+	var delta: int = new_value - old_value
+	if delta < 0:
+		BattleFX.damage_number(self, combatant.position, -delta, "hurt")
+	elif delta > 0:
+		BattleFX.damage_number(self, combatant.position, delta, "heal")
+
+
+func _on_status_ticked(
+	status_id: String, _hook: String, _fraction: float, combatant: BaseCombatant
+) -> void:
+	BattleFX.elemental_burst(
+		self, combatant.position, "Fire" if status_id == "burn" else "Dark"
+	)
+	_sfx(status_id if status_id in ["burn", "bleed"] else "status")
 
 
 func _on_battle_ended(victory: bool) -> void:

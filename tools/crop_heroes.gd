@@ -26,6 +26,24 @@ func _init() -> void:
 		# Front-facing idle: middle frame of the block's first (down-facing) row.
 		var rect: Rect2i = Rect2i(block.x * 3 * frame_w + frame_w, block.y * 4 * frame_h, frame_w, frame_h)
 		var crop: Image = src.get_region(rect)
+		_key_out_background(crop)
 		crop.save_png("res://assets/sprites/characters/%s.png" % pick_name)
 		print("saved %s from %s" % [pick_name, rect])
 	quit(0)
+
+
+## The sheet has an opaque flat background; sample the corner and erase it.
+func _key_out_background(img: Image) -> void:
+	var key: Color = img.get_pixel(0, 0)
+	if key.a == 0.0:
+		return  # already transparent
+	img.convert(Image.FORMAT_RGBA8)
+	for y: int in range(img.get_height()):
+		for x: int in range(img.get_width()):
+			var pixel: Color = img.get_pixel(x, y)
+			if (
+				absf(pixel.r - key.r) < 0.03
+				and absf(pixel.g - key.g) < 0.03
+				and absf(pixel.b - key.b) < 0.03
+			):
+				img.set_pixel(x, y, Color(0, 0, 0, 0))

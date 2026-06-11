@@ -466,3 +466,44 @@ curated sprite/backdrop/music lookups, root-window theme + textured button
 skin, missing-asset fallbacks still null-safe.
 
 **Deviations:** none beyond the already-logged asset-pass extension.
+
+---
+
+## Feedback pass — JRPG pointers, SFX everywhere, real battle FX (human-directed)
+
+Playtest issues fixed + requested juice added:
+
+- **Grey strip behind party (bug):** the hero sheet has an opaque flat background;
+  `tools/crop_heroes.gd` now keys it out (corner-sample + tolerance) — re-cropped
+  all five with true transparency (regression-guarded by test).
+- **Yellow box on the active character (bug):** the old highlight ring drew OVER
+  sprites. Ring removed entirely, replaced by the JRPG pointer system:
+  **gold bouncing chevron** over whoever's turn it is, **crimson chevron** over the
+  hovered target while choosing (driven by new `target_hovered` signal).
+- **Grounding:** elliptical shadow under every combatant's feet; staggered
+  FFX-style ranks for the party, arced enemy line, boss recentered.
+- **SFX (new `SfxManager` autoload):** every UI/combat event now has a voice —
+  hover/click on all menus, hit/crit/miss, fire/ice casts, heal, guard, pray,
+  echo, status lands, resolve shock, delay, burn/bleed ticks. All sounds are
+  **synthesized in code** (16-bit PCM recipes: tones/sweeps/noise bursts) so they
+  work with zero files and are individually overridable by dropping
+  `assets/audio/sfx/<name>.ogg`. Dedicated Sfx bus + options-menu volume slider
+  (with audible preview).
+- **Battle FX (`ui/battle_fx.gd`):** floating damage numbers (white/gold-crit/
+  green-heal) on every HP change incl. DoT ticks and enemies; slash streaks for
+  physical hits; elemental particle bursts (rising fire embers / falling ice
+  shards / dark pulses for Darkness-cost casts); heal sparkles; guard ring;
+  two-stage echo bursts; target shake; MISS / CRITICAL! / status-name /
+  DELAYED / REFLECTED! text pops.
+- Music note from playtest: first-fight silence couldn't be reproduced from
+  here; boss/menu/victory confirmed working by the human. Watch whether the
+  skirmish "battle" WAV plays on the next run — fallback swap to an mp3 track
+  is a one-line manifest change if it stays silent.
+
+**Test status:** `138/138 passed (1023 asserts)`; boots clean. New coverage:
+all 16 SFX recipes synthesize real audio, autoload plays through the pool
+without crashing, FX factories spawn nodes, hero-sprite corner transparency,
+battle scene boots with the gold arrow locked to the active actor.
+
+**Open:** harmless ObjectDB leak warning at forced quit (autoload audio
+streams at exit) — cosmetic, headless-only.

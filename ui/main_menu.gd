@@ -228,8 +228,17 @@ func _menu_button(text: String) -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.add_theme_font_size_override("font_size", 22)
+	button.mouse_entered.connect(func() -> void: _sfx("hover"))
+	button.focus_entered.connect(func() -> void: _sfx("hover"))
+	button.pressed.connect(func() -> void: _sfx("click"))
 	_menu_box.add_child(button)
 	return button
+
+
+func _sfx(sfx_name: String) -> void:
+	var sfx: Node = get_node_or_null("/root/SfxManager")
+	if sfx != null:
+		sfx.play(sfx_name)
 
 
 func _toggle(panel: PanelContainer) -> void:
@@ -287,6 +296,7 @@ func _build_options_panel() -> void:
 
 	box.add_child(_slider_row("Master volume", _master_volume_changed, 1.0))
 	box.add_child(_slider_row("Music volume", _music_volume_changed, 0.8))
+	box.add_child(_slider_row("SFX volume", _sfx_volume_changed, 0.9))
 
 	var fullscreen: CheckButton = CheckButton.new()
 	fullscreen.text = "Fullscreen"
@@ -323,3 +333,10 @@ func _music_volume_changed(value: float) -> void:
 	var music: Node = get_node_or_null("/root/MusicManager")
 	if music != null:
 		music.set_music_volume_linear(value)
+
+
+func _sfx_volume_changed(value: float) -> void:
+	var sfx: Node = get_node_or_null("/root/SfxManager")
+	if sfx != null:
+		sfx.set_sfx_volume_linear(value)
+		sfx.play("click")  # audible preview while sliding

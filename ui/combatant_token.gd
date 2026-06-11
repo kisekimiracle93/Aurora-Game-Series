@@ -7,7 +7,6 @@ const BODY_SIZE: Vector2 = Vector2(48, 64)
 var combatant: BaseCombatant
 
 var _body: ColorRect
-var _ring: ColorRect
 var _hp_fill: ColorRect
 var _guard_label: Label
 var _flash_target: CanvasItem
@@ -32,12 +31,13 @@ func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1
 			sprite.position.y = (BODY_SIZE.y - height * fit) / 2.0
 		add_child(sprite)
 
-	_ring = ColorRect.new()
-	_ring.color = Color(1.0, 0.9, 0.2, 0.9)
-	_ring.size = BODY_SIZE + Vector2(10, 10)
-	_ring.position = -(_ring.size / 2.0)
-	_ring.visible = false
-	add_child(_ring)
+	# Grounding shadow under the feet (sells "standing on the floor").
+	var shadow: Node2D = Node2D.new()
+	shadow.position = Vector2(0, BODY_SIZE.y / 2.0 + 4.0)
+	shadow.draw.connect(func() -> void:
+		shadow.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.32))
+		shadow.draw_circle(Vector2.ZERO, 28.0, Color(0.0, 0.0, 0.0, 0.38)))
+	add_child(shadow)
 
 	_body = ColorRect.new()
 	_body.color = body_color
@@ -84,10 +84,6 @@ func _process(_delta: float) -> void:
 		_guard_label.visible = combatant.is_guarding and combatant.is_alive()
 
 
-func set_highlighted(on: bool) -> void:
-	_ring.visible = on
-
-
 func _on_hp_changed(old_value: int, new_value: int) -> void:
 	var ratio: float = clampf(float(new_value) / float(combatant.stats.max_hp()), 0.0, 1.0)
 	_hp_fill.size.x = (BODY_SIZE.x + 4.0) * ratio
@@ -101,4 +97,3 @@ func _on_hp_changed(old_value: int, new_value: int) -> void:
 func _on_died() -> void:
 	rotation_degrees = 90.0
 	modulate = Color(0.45, 0.45, 0.45, 0.8)
-	_ring.visible = false

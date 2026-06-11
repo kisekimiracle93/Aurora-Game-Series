@@ -4,6 +4,7 @@ extends PanelContainer
 ## scene handles targeting. Unaffordable abilities are greyed out.
 
 signal ability_chosen(ability: AbilityData)
+signal button_hovered
 
 var _box: VBoxContainer
 var _title: Label
@@ -60,6 +61,8 @@ func _add_button(actor: BaseCombatant, ability: AbilityData, force_disabled: boo
 		button.disabled = true
 		button.text += "  [Silenced]"
 	button.pressed.connect(func() -> void: ability_chosen.emit(ability))
+	button.mouse_entered.connect(func() -> void: button_hovered.emit())
+	button.focus_entered.connect(func() -> void: button_hovered.emit())
 	_box.add_child(button)
 
 
