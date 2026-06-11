@@ -270,3 +270,76 @@ request as a shared no-op action.
 4. Does Darkness feel powerful-but-scary on the Heirs (HP cap shrinking as it rises)?
 5. Do Aether costs force real choices? Does the Echo gauge → Echo ability loop read?
 6. Pray: park the party on it and confirm enemies wail on you unprotected.
+
+---
+
+## ▶ PLAYTEST CHECKPOINT 2 — PASSED (human, 2026-06-11)
+
+Human approved the M4 build and asked to push on ("yes - push to next phase").
+No issues reported. M4 is done.
+
+---
+
+## M5 — Boss: Frozen Shepherd — BUILT, awaiting PLAYTEST CHECKPOINT 3
+
+All M5 logic is headless-verified; fairness/readability verdict belongs to the human.
+
+**Built:**
+
+- `combat/boss_frozen_shepherd.gd` (`FrozenShepherdController`, child of the boss,
+  routed by the encounter): 3-phase script with `phase_changed` cues.
+  - **P1 "Preservation"** (>60% HP): turn 1 **Merc Freeze** (95% base, the Church's
+    shield is disposable), turn 2 **Summon 2 Crystal Wolves** (mid-fight `add_enemy`
+    + `combatant_added` signal), turn 3 **Glacial Command** (boss-flavored Slow
+    instance `glacial_chill`: ×0.75 speed, −10 accuracy), then a Command/Rake
+    rotation with merc-first priority targeting.
+  - **P2 "Stagnation"** (≤60%): opens with **Echo Roar** (70% Resolve Shock AoE),
+    raises **Ice Mirror** (next Fire hit rebounds onto the caster — generic
+    `reflect_element`/`reflect_charges` on BaseCombatant, resolved in
+    ActionResolver, re-armed every 3rd boss turn), and single-target attacks
+    switch to **Hunt the Dark** (highest-Darkness stalking).
+  - **P3 "Release"** (≤25%): Ice affinity flips to **weak** (the Heirs' payoff),
+    guard/ward shed 30%, ferocity 1.15 → 1.4. Crossing straight to P3 still fires
+    the P2 cue + kit (no skipped phases).
+  - **Overflow substitute** (NOT Burden): from boss turn 7, every boss turn drains
+    the party **−6 Resolve** with its own log line.
+- Boss data: 1500 HP, stability 0.5 (25 innate status resistance),
+  `accumulates_delay_resistance = true` (the M1 DR ramp finally bites).
+- Scene work: `fight_select.tscn` (new main scene) → wolfpack skirmish or boss
+  arena (`boss_test.tscn`, same battle script with `roster="boss"`); boss token
+  ×1.7 ice-white; phase banner + background tint tween per phase (placeholder
+  cues); summoned wolves get tokens beside the boss; end overlay gains a
+  "Fight select" button.
+
+**Test status:** `126/126 passed (936 asserts)` — headless, green; game boots clean.
+New coverage: P1 opener sequence [merc_freeze → summon → glacial_command] with the
+freeze landing and enemies growing to 3; overflow pulses exactly once per boss turn
+from turn 7; phase flips at 60%/25% driven purely by HP signals; P3 Ice-weak +
+armor shed + never-skip-P2; P2 roar→mirror order and armed mirror; mirror reflects
+Fire once (boss untouched, caster burned, charge spent, second cast lands); Hunt
+the Dark rakes the highest-Darkness Heir; fight-select + boss scenes boot headless
+to player input with the controller wired.
+
+**Numbers I chose (tunable):** boss HP 1500 / power 38 / focus 34 / speed 24;
+overflow from turn 7 at −6 Resolve; mirror re-arm every 3 boss turns; P3 armor ×0.7,
+ferocity 1.4; Crystal Wolves summoned once (2 of them).
+
+**Open issues / notes for playtest:**
+
+- Boss fight length and the P1 merc-freeze opener are feel-critical — watch whether
+  1500 HP reads as "matters far more" or "spongey".
+- Crystal Wolves absorb Ice: careless Heir AoE heals them (intended texture).
+
+**Deviations:** Glacial Command's accuracy-down rides a second *instance* of the
+existing `slow` status family (`glacial_chill.tres`, same id) rather than a new
+status type, keeping the six-status scope intact.
+
+**▶ PLAYTEST CHECKPOINT 3 — what to test (`godot --path .` → "Boss — The Frozen Shepherd"):**
+
+1. Are the phase transitions readable (banner + tint + behavior shift)?
+2. Does Ice Mirror force Bastil/Cavene to adapt (stop throwing Fire blindly)?
+3. Does P1 (merc frozen, wolves summoned, chill AoE) feel scripted-but-fair?
+4. Does the late-fight Overflow drain create pressure without feeling cheap?
+5. Is P3 a real payoff for Jecht/Mati (Ice now rips; armor shed)?
+6. Overall: hard but fair? How many retries did it take, and did the −15 Resolve
+   retry penalty change how the rematch felt?

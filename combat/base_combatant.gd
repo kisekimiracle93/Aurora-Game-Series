@@ -22,6 +22,10 @@ var is_guarding: bool = false
 var needs_special_revive: bool = false
 ## Set for enemies: the EnemyData this combatant was built from (AI profile etc.).
 var source_enemy_data: EnemyData = null
+## Ice Mirror-type wards: while charges remain, damage of reflect_element
+## bounces back at the attacker instead of landing here.
+var reflect_element: String = ""
+var reflect_charges: int = 0
 
 var stats: StatsComponent
 var meters: MetersComponent

@@ -16,6 +16,16 @@ const ENEMY_PATHS: Array[String] = [
 	"res://data/enemies/icebound_stag.tres",
 ]
 const MERC_COLOR: Color = Color(0.55, 0.65, 0.6)
+const BOSS_COLOR: Color = Color(0.75, 0.92, 1.0)
+const BOSS_PATH: String = "res://data/enemies/frozen_shepherd.tres"
+const PHASE_TINTS: Dictionary = {
+	1: Color(0.09, 0.10, 0.14),
+	2: Color(0.07, 0.08, 0.16),
+	3: Color(0.13, 0.07, 0.10),
+}
+
+## "wolfpack" (M4 trash fight) or "boss" (M5 Frozen Shepherd arena).
+@export var roster: String = "wolfpack"
 
 const PARTY_COLOR: Color = Color(0.35, 0.55, 0.9)
 const HEIR_COLOR: Color = Color(0.62, 0.4, 0.95)
@@ -35,6 +45,9 @@ var combat_log: CombatLog
 var pending_ability: AbilityData
 ## name -> {"resolve": float, "darkness": float} carried across rebuilds.
 var carried_meters: Dictionary = {}
+var background: ColorRect
+var boss_controller: FrozenShepherdController
+var _add_slot: int = 0
 
 
 func _ready() -> void:
@@ -48,10 +61,15 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	enemies = []
 	tokens = {}
 	pending_ability = null
+	boss_controller = null
+	_add_slot = 0
 
 	_build_battlefield()
 	_spawn_party(is_defeat_retry)
-	_spawn_enemies()
+	if roster == "boss":
+		_spawn_boss()
+	else:
+		_spawn_enemies()
 	_build_ui()
 
 	encounter = CombatEncounter.new()
@@ -63,12 +81,16 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	encounter.turn_started.connect(_on_turn_started)
 	encounter.player_turn_started.connect(_on_player_turn)
 	encounter.battle_ended.connect(_on_battle_ended)
+	encounter.combatant_added.connect(_on_combatant_added)
+	if boss_controller != null:
+		encounter.register_boss_controller(boss_controller)
+		boss_controller.phase_changed.connect(_on_boss_phase_changed)
 	encounter.start()
 
 
 func _build_battlefield() -> void:
-	var background: ColorRect = ColorRect.new()
-	background.color = Color(0.09, 0.10, 0.14)
+	background = ColorRect.new()
+	background.color = PHASE_TINTS[1]
 	background.size = Vector2(1280, 720)
 	add_child(background)
 	var ground: ColorRect = ColorRect.new()
@@ -108,10 +130,47 @@ func _spawn_enemies() -> void:
 		_add_token(enemy, ENEMY_COLOR)
 
 
-func _add_token(combatant: BaseCombatant, color: Color) -> void:
+func _spawn_boss() -> void:
+	var data: EnemyData = load(BOSS_PATH)
+	var boss: BaseCombatant = BaseCombatant.from_enemy(data)
+	boss.position = Vector2(960, 250)
+	add_child(boss)
+	enemies.append(boss)
+	_add_token(boss, BOSS_COLOR, 1.7)
+	boss_controller = FrozenShepherdController.new()
+	boss_controller.attach_to(boss)
+
+
+## Mid-fight reinforcements (Crystal Wolves) get tokens beside the boss.
+func _on_combatant_added(combatant: BaseCombatant) -> void:
+	combatant.position = Vector2(1120, 170 + _add_slot * 190)
+	_add_slot += 1
+	add_child(combatant)
+	_add_token(combatant, ENEMY_COLOR)
+
+
+func _on_boss_phase_changed(phase: int, title: String) -> void:
+	if background != null and PHASE_TINTS.has(phase):
+		var tween: Tween = create_tween()
+		tween.tween_property(background, "color", PHASE_TINTS[phase], 0.6)
+	var banner: Label = Label.new()
+	banner.text = "PHASE %d — %s" % [phase, title]
+	banner.add_theme_font_size_override("font_size", 34)
+	banner.modulate = Color(0.8, 0.95, 1.0)
+	banner.position = Vector2(0, 200)
+	banner.size = Vector2(1280, 60)
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(banner)
+	var fade: Tween = create_tween()
+	fade.tween_interval(1.6)
+	fade.tween_property(banner, "modulate:a", 0.0, 0.9)
+	fade.tween_callback(banner.queue_free)
+
+
+func _add_token(combatant: BaseCombatant, color: Color, size_scale: float = 1.0) -> void:
 	var token: CombatantToken = CombatantToken.new()
 	combatant.add_child(token)
-	token.setup(combatant, color)
+	token.setup(combatant, color, size_scale)
 	tokens[combatant] = token
 
 
@@ -232,6 +291,13 @@ func _show_end_overlay(victory: bool) -> void:
 	again.pressed.connect(func() -> void: call_deferred("_start_battle", not victory))
 	box.add_child(again)
 	again.grab_focus()
+
+	var select: Button = Button.new()
+	select.text = "Fight select"
+	select.pressed.connect(
+		func() -> void: get_tree().change_scene_to_file("res://world/fight_select.tscn")
+	)
+	box.add_child(select)
 
 	var quit: Button = Button.new()
 	quit.text = "Quit"

@@ -12,6 +12,7 @@ signal turn_started(combatant: BaseCombatant)
 signal player_turn_started(combatant: BaseCombatant)
 signal action_resolved(actor: BaseCombatant, ability: AbilityData, results: Array[Dictionary])
 signal combatant_died(combatant: BaseCombatant)
+signal combatant_added(combatant: BaseCombatant)
 signal timeline_changed(preview: Array[BaseCombatant])
 signal battle_ended(victory: bool)
 
@@ -27,6 +28,8 @@ var enemies: Array[BaseCombatant] = []
 var state: State = State.IDLE
 var current_actor: BaseCombatant = null
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Scripted boss brain (M5+); takes over that combatant's turns from EnemyAI.
+var boss_controller: Node = null
 
 
 ## seed_value 0 = randomized battle; anything else = deterministic (tests).
@@ -48,6 +51,29 @@ func start() -> void:
 	_log("Battle start!")
 	_emit_timeline()
 	advance_until_input()
+
+
+func register_boss_controller(controller: Node) -> void:
+	boss_controller = controller
+
+
+## Mid-battle reinforcement (boss summons). The scene listens to combatant_added.
+func add_enemy(combatant: BaseCombatant) -> void:
+	enemies.append(combatant)
+	combatant.stats.died.connect(_on_combatant_died.bind(combatant))
+	combatant_added.emit(combatant)
+	_emit_timeline()
+
+
+## Public surface for boss controllers (resolve through the normal pipeline).
+func execute_action(
+	actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant]
+) -> void:
+	_execute(actor, ability, targets)
+
+
+func log_line(text: String) -> void:
+	_log(text)
 
 
 func all_combatants() -> Array[BaseCombatant]:
@@ -119,7 +145,10 @@ func _step_one_turn() -> void:
 		player_turn_started.emit(actor)
 	else:
 		state = State.RESOLVING
-		_enemy_take_turn(actor)
+		if boss_controller != null and boss_controller.get("boss") == actor:
+			boss_controller.take_boss_turn(self)
+		else:
+			_enemy_take_turn(actor)
 		if state == State.RESOLVING:
 			state = State.IDLE
 
@@ -253,6 +282,12 @@ func _log_results(
 		var parts: Array[String] = []
 		if result["missed"]:
 			_log("%s's %s misses %s!" % [actor.display_name, ability.display_name, target.display_name])
+			continue
+		if bool(result.get("reflected", false)):
+			_log(
+				"%s's %s is hurled back by the Ice Mirror for %d!"
+				% [actor.display_name, ability.display_name, result["damage"]]
+			)
 			continue
 		if int(result["damage"]) > 0:
 			var crit_tag: String = " CRITICAL!" if bool(result["crit"]) else ""

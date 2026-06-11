@@ -41,6 +41,7 @@ static func _resolve_on_target(
 		"resolve_drop": 0,
 		"delayed": false,
 		"resolve_gain": 0,
+		"reflected": false,
 	}
 
 	var deals_damage: bool = ability.damage_type != "none" and ability.coeff > 0.0
@@ -54,8 +55,8 @@ static func _resolve_on_target(
 			result["missed"] = true
 			return result  # a whiffed attack applies nothing
 		_apply_damage(ability, actor, target, rng, result)
-		if not target.is_alive():
-			return result  # no statuses/delay on the slain
+		if bool(result["reflected"]) or not target.is_alive():
+			return result  # no riders through a mirror or onto the slain
 
 	if ability.heals:
 		var heal_amount: int = int(
@@ -127,6 +128,14 @@ static func _apply_damage(
 	):
 		damage = DamageMath.apply_crit(damage)
 		result["crit"] = true
+
+	# Ice Mirror-type reflection: the hit rebounds onto the attacker.
+	if target.reflect_charges > 0 and ability.element == target.reflect_element:
+		target.reflect_charges -= 1
+		actor.stats.take_damage(damage)
+		result["reflected"] = true
+		result["damage"] = damage
+		return
 
 	var taken_mult: float = DamageMath.incoming_damage_mult(target.resolve_for_math())
 	if target.is_guarding:

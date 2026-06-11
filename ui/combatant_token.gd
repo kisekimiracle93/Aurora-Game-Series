@@ -12,8 +12,9 @@ var _hp_fill: ColorRect
 var _guard_label: Label
 
 
-func setup(combatant_in: BaseCombatant, body_color: Color) -> void:
+func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1.0) -> void:
 	combatant = combatant_in
+	scale = Vector2(size_scale, size_scale)
 
 	_ring = ColorRect.new()
 	_ring.color = Color(1.0, 0.9, 0.2, 0.9)

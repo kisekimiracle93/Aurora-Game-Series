@@ -7,7 +7,7 @@ config_version=5
 [application]
 
 config/name="Game Aurora — Vertical Slice"
-run/main_scene="res://world/battle_test.tscn"
+run/main_scene="res://world/fight_select.tscn"
 config/features=PackedStringArray("4.6")
 
 [debug]

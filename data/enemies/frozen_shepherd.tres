@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemydata"]
+
+[resource]
+script = ExtResource("1_enemydata")
+name = "Frozen Shepherd"
+class_type = "Aetherion"
+element = "Ice"
+is_heir = false
+base_stats = {
+"accuracy": 96,
+"aether": 0,
+"crit": 8,
+"evasion": 4,
+"focus": 34,
+"guard": 26,
+"hp": 1500,
+"power": 38,
+"speed": 24,
+"ward": 26
+}
+affinities = {
+"Fire": "neutral",
+"Ice": "resist"
+}
+ability_ids = Array[String](["glacial_rake", "merc_freeze", "glacial_command", "echo_roar", "ice_mirror", "summon_crystal_wolves"])
+ferocity = 1.15
+stability = 0.5
+ai_profile = "priority"
+accumulates_delay_resistance = true
