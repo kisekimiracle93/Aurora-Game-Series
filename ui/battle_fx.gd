@@ -8,6 +8,51 @@ const HURT_COLOR: Color = Color(1.0, 0.92, 0.85)
 const CRIT_COLOR: Color = Color(1.0, 0.85, 0.25)
 const HEAL_COLOR: Color = Color(0.45, 1.0, 0.55)
 
+## Adult-violence toggle (Options menu). Off = no blood, everything else stays.
+static var blood_enabled: bool = true
+
+
+## Crimson spray on physical wounds; big version for crits and kills.
+static func blood_spray(parent: Node, pos: Vector2, big: bool = false) -> void:
+	if not blood_enabled:
+		return
+	var particles: CPUParticles2D = CPUParticles2D.new()
+	particles.position = pos + Vector2(0, -10)
+	particles.one_shot = true
+	particles.explosiveness = 0.95
+	particles.lifetime = 0.6
+	particles.amount = 34 if big else 18
+	particles.spread = 70.0
+	particles.direction = Vector2(0, -1)
+	particles.gravity = Vector2(0, 540)
+	particles.initial_velocity_min = 90.0 if big else 50.0
+	particles.initial_velocity_max = 220.0 if big else 130.0
+	particles.scale_amount_min = 1.5
+	particles.scale_amount_max = 3.5 if big else 2.5
+	particles.color = Color(0.62, 0.04, 0.04)
+	particles.z_index = 44
+	parent.add_child(particles)
+	particles.emitting = true
+	particles.finished.connect(particles.queue_free)
+
+
+## A dark stain that lingers on the ground, then soaks away.
+static func blood_pool(parent: Node, pos: Vector2) -> void:
+	if not blood_enabled:
+		return
+	var pool: Node2D = Node2D.new()
+	pool.position = pos + Vector2(randf_range(-8.0, 8.0), 36.0)
+	pool.z_index = 5
+	pool.draw.connect(func() -> void:
+		pool.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.30))
+		pool.draw_circle(Vector2.ZERO, 30.0, Color(0.40, 0.02, 0.02, 0.75))
+		pool.draw_circle(Vector2(14, 6), 12.0, Color(0.40, 0.02, 0.02, 0.7)))
+	parent.add_child(pool)
+	var tween: Tween = pool.create_tween()
+	tween.tween_interval(6.0)
+	tween.tween_property(pool, "modulate:a", 0.0, 3.0)
+	tween.tween_callback(pool.queue_free)
+
 
 ## Floating combat number (damage = warm white, crit = gold, heal = green).
 static func damage_number(parent: Node, pos: Vector2, amount: int, kind: String = "hurt") -> void:

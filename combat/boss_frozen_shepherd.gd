@@ -68,9 +68,9 @@ func take_boss_turn(encounter: CombatEncounter) -> void:
 
 	match phase:
 		1:
-			_phase_one_turn(encounter, living_party)
+			await _phase_one_turn(encounter, living_party)
 		_:
-			_phase_two_three_turn(encounter, living_party)
+			await _phase_two_three_turn(encounter, living_party)
 
 	# Overflow Pulse substitute: late-fight Resolve bleed, not an action.
 	if boss_turn_count >= OVERFLOW_START_TURN and not encounter.living(encounter.party).is_empty():
@@ -88,14 +88,14 @@ func _phase_one_turn(encounter: CombatEncounter, living_party: Array[BaseCombata
 		_opened_with_freeze = true
 		var merc: BaseCombatant = _find_merc(living_party)
 		if merc != null:
-			encounter.execute_action(boss, _freeze, [merc])
+			await encounter.execute_action_presented(boss, _freeze, [merc])
 			return
 	# 2) Call the pack.
 	if not summoned:
-		_cast_summon(encounter)
+		await _cast_summon(encounter)
 		return
 	# 3) Then settle into the rotation: Command, Rake, Rake...
-	_rotation(encounter, living_party, [_command, _rake, _rake])
+	await _rotation(encounter, living_party, [_command, _rake, _rake])
 
 
 func _phase_two_three_turn(
@@ -103,15 +103,15 @@ func _phase_two_three_turn(
 ) -> void:
 	if not _p2_roared:
 		_p2_roared = true
-		encounter.execute_action(boss, _roar, living_party)
+		await encounter.execute_action_presented(boss, _roar, living_party)
 		return
 	if boss.reflect_charges <= 0 and boss_turn_count - _mirror_cast_turn >= MIRROR_REARM_INTERVAL:
-		_cast_ice_mirror(encounter)
+		await _cast_ice_mirror(encounter)
 		return
 	if phase == 2:
-		_rotation(encounter, living_party, [_rake, _command, _rake, _roar])
+		await _rotation(encounter, living_party, [_rake, _command, _rake, _roar])
 	else:
-		_rotation(encounter, living_party, [_rake, _rake, _command])
+		await _rotation(encounter, living_party, [_rake, _rake, _command])
 
 
 func _rotation(
@@ -124,7 +124,7 @@ func _rotation(
 		targets = living_party
 	else:
 		targets = [_pick_target(living_party, encounter.rng)]
-	encounter.execute_action(boss, ability, targets)
+	await encounter.execute_action_presented(boss, ability, targets)
 
 
 func _find_merc(living_party: Array[BaseCombatant]) -> BaseCombatant:
@@ -144,6 +144,8 @@ func _pick_target(
 
 func _cast_summon(encounter: CombatEncounter) -> void:
 	summoned = true
+	if encounter.presenter != null:
+		await encounter.presenter.present_windup(boss, _summon)
 	var data: EnemyData = load("res://data/enemies/crystal_wolf.tres")
 	for i: int in range(2):
 		var wolf: BaseCombatant = BaseCombatant.from_enemy(data)
@@ -152,15 +154,21 @@ func _cast_summon(encounter: CombatEncounter) -> void:
 	encounter.log_line("The Frozen Shepherd howls — two Crystal Wolves answer!")
 	boss.ctb.pay_action_cost(_summon.ct_cost)
 	encounter.action_resolved.emit(boss, _summon, [] as Array[Dictionary])
+	if encounter.presenter != null:
+		await encounter.presenter.present_followthrough(boss, _summon)
 
 
 func _cast_ice_mirror(encounter: CombatEncounter) -> void:
 	_mirror_cast_turn = boss_turn_count
+	if encounter.presenter != null:
+		await encounter.presenter.present_windup(boss, _mirror)
 	boss.reflect_element = "Fire"
 	boss.reflect_charges = 1
 	encounter.log_line("The Shepherd raises an Ice Mirror — the next flame will rebound!")
 	boss.ctb.pay_action_cost(_mirror.ct_cost)
 	encounter.action_resolved.emit(boss, _mirror, [] as Array[Dictionary])
+	if encounter.presenter != null:
+		await encounter.presenter.present_followthrough(boss, _mirror)
 
 
 func _on_boss_hp_changed(_old: int, new_value: int) -> void:

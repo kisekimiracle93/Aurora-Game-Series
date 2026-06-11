@@ -30,6 +30,9 @@ var current_actor: BaseCombatant = null
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Scripted boss brain (M5+); takes over that combatant's turns from EnemyAI.
 var boss_controller: Node = null
+## Optional cinematic pacing hook (battle scene sets it). When null, every
+## action resolves instantly — headless tests and AI sims stay synchronous.
+var presenter: Node = null
 
 
 ## seed_value 0 = randomized battle; anything else = deterministic (tests).
@@ -72,6 +75,17 @@ func execute_action(
 	_execute(actor, ability, targets)
 
 
+## Same, but paced by the cinematic presenter when one is attached.
+func execute_action_presented(
+	actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant]
+) -> void:
+	if presenter != null:
+		await presenter.present_windup(actor, ability)
+	_execute(actor, ability, targets)
+	if presenter != null:
+		await presenter.present_followthrough(actor, ability)
+
+
 func log_line(text: String) -> void:
 	_log(text)
 
@@ -93,10 +107,11 @@ func living(group: Array[BaseCombatant]) -> Array[BaseCombatant]:
 
 ## Run enemy/system turns until a player must choose, or the battle ends.
 ## The step guard only trips on logic bugs (it would otherwise hang the game).
+## With no presenter attached this never suspends (fully synchronous).
 func advance_until_input() -> void:
 	var steps: int = 0
 	while state != State.AWAITING_PLAYER and state != State.VICTORY and state != State.DEFEAT:
-		_step_one_turn()
+		await _step_one_turn()
 		steps += 1
 		if steps > MAX_AUTO_STEPS:
 			push_error("CombatEncounter: turn loop exceeded %d steps; aborting." % MAX_AUTO_STEPS)
@@ -114,10 +129,13 @@ func submit_player_action(ability: AbilityData, targets: Array[BaseCombatant]) -
 		_log("%s's Echo gauge is not full." % current_actor.display_name)
 		return
 	state = State.RESOLVING
-	_execute(current_actor, ability, targets)
+	if presenter != null:
+		await execute_action_presented(current_actor, ability, targets)
+	else:
+		_execute(current_actor, ability, targets)
 	if state == State.RESOLVING:
 		state = State.IDLE
-	advance_until_input()
+	await advance_until_input()
 
 
 func _step_one_turn() -> void:
@@ -146,9 +164,9 @@ func _step_one_turn() -> void:
 	else:
 		state = State.RESOLVING
 		if boss_controller != null and boss_controller.get("boss") == actor:
-			boss_controller.take_boss_turn(self)
+			await boss_controller.take_boss_turn(self)
 		else:
-			_enemy_take_turn(actor)
+			await _enemy_take_turn(actor)
 		if state == State.RESOLVING:
 			state = State.IDLE
 
@@ -193,7 +211,7 @@ func _enemy_take_turn(actor: BaseCombatant) -> void:
 	else:
 		var profile: String = _ai_profile_for(actor)
 		targets = [EnemyAI.pick_target(profile, targets_pool, rng)]
-	_execute(actor, ability, targets)
+	await execute_action_presented(actor, ability, targets)
 
 
 func _ai_profile_for(actor: BaseCombatant) -> String:

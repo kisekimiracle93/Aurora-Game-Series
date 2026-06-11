@@ -306,6 +306,12 @@ func _build_options_panel() -> void:
 		))
 	box.add_child(fullscreen)
 
+	var blood: CheckButton = CheckButton.new()
+	blood.text = "Blood & violence FX"
+	blood.button_pressed = BattleFX.blood_enabled
+	blood.toggled.connect(func(on: bool) -> void: BattleFX.blood_enabled = on)
+	box.add_child(blood)
+
 
 func _slider_row(label_text: String, handler: Callable, default_value: float) -> HBoxContainer:
 	var row: HBoxContainer = HBoxContainer.new()
