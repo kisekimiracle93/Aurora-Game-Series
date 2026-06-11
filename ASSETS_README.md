@@ -42,6 +42,13 @@ Naming rule: lowercase, spaces → underscores, apostrophes dropped
 ("Church Lancer" → `church_lancer.png`). Trailing numbers are ignored so all
 Aether Wolves share one sprite.
 
+## The manifest (no-copy mapping)
+
+`assets/manifest.cfg` maps logical names straight to files anywhere in the
+toolbox (`assets/all files/...`) without duplicating them — the manifest wins
+over the convention folders. Current bindings cover all music slots and the
+battle/boss backdrops. To swap a track or image, edit one line there.
+
 ## How to send me your files (from your PC)
 
 Copy files from Downloads into the matching folders inside your

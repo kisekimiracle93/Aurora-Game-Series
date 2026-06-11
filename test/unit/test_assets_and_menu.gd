@@ -13,10 +13,37 @@ func test_file_name_convention() -> void:
 
 
 func test_missing_assets_fall_back_to_null_silently() -> void:
-	assert_null(AssetLibrary.texture("characters", "Bastil"))
-	assert_null(AssetLibrary.texture("backgrounds", "menu"))
-	assert_null(AssetLibrary.music_stream("battle"))
-	assert_null(AssetLibrary.sfx_stream("hit"))
+	assert_null(AssetLibrary.texture("characters", "Zz Nonexistent Hero"))
+	assert_null(AssetLibrary.texture("backgrounds", "zz_nowhere"))
+	assert_null(AssetLibrary.music_stream("zz_unwritten_song"))
+	assert_null(AssetLibrary.sfx_stream("zz_unheard_blip"))
+
+
+func test_curated_toolbox_assets_resolve() -> void:
+	# Cropped/copied sprites in the convention folders.
+	for member_name: String in [
+		"Bastil", "Cavene", "Jecht", "Mati", "Church Lancer",
+		"Aether Wolf 1", "Icebound Stag", "Crystal Wolf 2", "Frozen Shepherd",
+	]:
+		assert_not_null(
+			AssetLibrary.texture("characters", member_name), "%s sprite" % member_name
+		)
+	# Manifest-mapped (no-copy) toolbox files.
+	assert_not_null(AssetLibrary.texture("backgrounds", "battle"), "battle backdrop")
+	assert_not_null(AssetLibrary.texture("backgrounds", "boss"), "boss backdrop")
+	assert_not_null(AssetLibrary.music_stream("victory"), "victory sting via manifest")
+
+
+func test_rpg_ui_theme_is_applied_to_the_window() -> void:
+	var theme: Theme = get_tree().root.theme
+	assert_not_null(theme, "UiTheme autoload skinned the root window")
+	if theme == null:
+		return
+	assert_true(theme.has_stylebox("panel", "PanelContainer"))
+	var box: StyleBox = theme.get_stylebox("normal", "Button")
+	assert_true(box is StyleBoxTexture, "Kenney RPG button skin in place")
+	if box is StyleBoxTexture:
+		assert_not_null((box as StyleBoxTexture).texture)
 
 
 func test_music_manager_autoload_no_ops_without_files() -> void:

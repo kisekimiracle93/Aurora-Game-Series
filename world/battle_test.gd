@@ -107,6 +107,7 @@ func _build_battlefield() -> void:
 		image.size = Vector2(1280, 720)
 		image.stretch_mode = TextureRect.STRETCH_SCALE
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # pixel-art stretch
 		add_child(image)
 	background = ColorRect.new()
 	background.color = PHASE_TINTS[1] if art == null else Color(PHASE_TINTS[1], 0.35)

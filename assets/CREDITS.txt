@@ -1,0 +1,39 @@
+ASSET CREDITS — Game Aurora vertical slice
+==========================================
+Toolbox supplied by the project owner ("assets/all files"). Entries below cover
+what the game currently USES. Anything not listed is unused toolbox material.
+Owner: please verify the source/license lines marked (verify) before any
+public release.
+
+ART
+---
+- Battle sprites for Bastil/Cavene/Jecht/Mati/Church Lancer: cropped from
+  Heroes_01.png — RPG hero sheet from the supplied toolbox (verify source;
+  style matches classic free RPG Maker-like sheets).
+- Enemy sprites (Aether Wolf, Icebound Stag, Crystal Wolf, Frozen Shepherd):
+  Dungeon Crawl Stone Soup tile set — CC0 / public domain.
+- Battle/boss backdrop: background01.png (ice cavern parallax) from the
+  supplied toolbox (verify source).
+- UI skin: Kenney "UI Pack: RPG Expansion" (kenney.nl) — CC0 / public domain.
+- Reserved for later passes: Ravenmore Fantasy Icon Pack (CC-BY — credit
+  "Ravenmore / dycha.net" when wired), Kenney UI Pack (CC0), LPC character
+  pieces (CC-BY-SA 3.0 / GPL 3.0 — attribution required when wired),
+  town_rpg_pack, RPG Terrains, mobile/xbox controller prompts, steamglyphs.
+
+MUSIC
+-----
+- battle: "Fight Them Until We Cant" — Zander Noriega (OpenGameArt, CC-BY 3.0).
+- boss: "Heroic Demise" — Matthew Pablo, matthewpablo.com (OpenGameArt, CC-BY 3.0).
+- menu: "Stormfront" — Kevin MacLeod, incompetech.com (CC-BY 3.0/4.0).
+- boss_release (phase 3): "Black Vortex" — Kevin MacLeod, incompetech.com (CC-BY).
+- victory: "Discovery Hit" — Kevin MacLeod, incompetech.com (CC-BY).
+- defeat: "No More Magic" — HorrorPen (OpenGameArt, CC-BY 3.0).
+- reserved: "A Journey Awaits" (Pete & Pete / verify), "old city theme" (verify),
+  "ambientmain_0" (verify), plus the remaining toolbox tracks.
+
+NOTES
+-----
+- magical_theme.flac is unused: Godot does not import FLAC natively. Convert to
+  OGG if wanted.
+- 789_Lorc_RPG_icons.7z is unextracted (no 7z tool in the build environment);
+  Lorc's icons are CC-BY 3.0 (game-icons.net) when wired.

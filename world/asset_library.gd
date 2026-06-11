@@ -6,11 +6,34 @@ extends RefCounted
 
 const TEXTURE_EXTENSIONS: Array[String] = ["png", "jpg", "jpeg", "webp"]
 const AUDIO_EXTENSIONS: Array[String] = ["ogg", "mp3", "wav"]
+## Optional mapping file: points logical names at files anywhere in the
+## toolbox (assets/all files/...) without copying them. Convention paths win
+## only when the manifest has no entry.
+const MANIFEST_PATH: String = "res://assets/manifest.cfg"
+
+static var _manifest: ConfigFile = null
+static var _manifest_loaded: bool = false
+
+
+static func _manifest_lookup(section: String, key: String) -> String:
+	if not _manifest_loaded:
+		_manifest_loaded = true
+		if ResourceLoader.exists(MANIFEST_PATH) or FileAccess.file_exists(MANIFEST_PATH):
+			var config: ConfigFile = ConfigFile.new()
+			if config.load(MANIFEST_PATH) == OK:
+				_manifest = config
+	if _manifest == null:
+		return ""
+	return String(_manifest.get_value(section, key, ""))
 
 
 ## e.g. texture("characters", "Aether Wolf 2") -> assets/sprites/characters/aether_wolf.png
 static func texture(category: String, display_name: String) -> Texture2D:
-	var base: String = "res://assets/sprites/%s/%s" % [category, to_file_name(display_name)]
+	var key: String = to_file_name(display_name)
+	var mapped: String = _manifest_lookup(category, key)
+	if mapped != "" and ResourceLoader.exists(mapped):
+		return load(mapped) as Texture2D
+	var base: String = "res://assets/sprites/%s/%s" % [category, key]
 	for ext: String in TEXTURE_EXTENSIONS:
 		var path: String = "%s.%s" % [base, ext]
 		if ResourceLoader.exists(path):
@@ -18,8 +41,11 @@ static func texture(category: String, display_name: String) -> Texture2D:
 	return null
 
 
-## e.g. music_stream("battle") -> assets/audio/music/battle.ogg
+## e.g. music_stream("battle") -> manifest [music] battle, else assets/audio/music/battle.ogg
 static func music_stream(track_name: String) -> AudioStream:
+	var mapped: String = _manifest_lookup("music", to_file_name(track_name))
+	if mapped != "" and ResourceLoader.exists(mapped):
+		return load(mapped) as AudioStream
 	return _audio("res://assets/audio/music/%s" % to_file_name(track_name))
 
 

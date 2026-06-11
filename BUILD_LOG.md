@@ -421,3 +421,48 @@ remains true by default — real music only plays if the human supplies files).
 
 **Open:** waiting on the human's asset drop (Downloads → assets/ → push) to bind
 real art; icons/ and tiles/ are reserved for the M6 world + a later UI-icon pass.
+
+---
+
+## Asset pass B — toolbox curation (art + music wired)
+
+Human pushed a 26k-file / ~500MB toolbox into `assets/all files` ("pick what
+fits, rename, ignore the rest"). Curated and wired this pass:
+
+**Music (via new `assets/manifest.cfg` — maps logical names to toolbox files
+with zero copying; AssetLibrary checks the manifest before convention paths):**
+menu = "Stormfront" (K. MacLeod) · battle = "Fight Them Until We Cant"
+(Zander Noriega) · boss = "Heroic Demise" (Matthew Pablo) · phase 3 =
+"Black Vortex" · victory = "Discovery Hit" · defeat = "No More Magic" ·
+reserved for M6: town/world/dungeon tracks. FLAC track skipped (Godot can't
+import FLAC) — noted in CREDITS.
+
+**Sprites:** party + merc cropped from the toolbox hero sheet via
+`tools/crop_heroes.gd` (24×32 front-facing frames → bastil/cavene/jecht/mati/
+church_lancer.png); enemies from the Dungeon Crawl Stone Soup set (CC0):
+wolf→Aether Wolf, warg→Icebound Stag, ice_beast→Crystal Wolf,
+frost_giant→Frozen Shepherd. Tokens render pixel art with NEAREST filtering,
+integer upscale, bottom-aligned; grey-box rects remain the fallback.
+
+**Backdrops:** ice-cavern parallax (background01) for both arenas via manifest;
+phase tint rides translucently on top; NEAREST stretch.
+
+**UI skin:** new `UiTheme` autoload builds a runtime Theme from Kenney's
+UI Pack RPG (CC0) — brown panels, beige/blue/grey long buttons (normal/hover/
+pressed/focus/disabled), ProgressBar backing — applied to the root window so
+every menu/panel/button in the game is skinned at once; silently keeps the
+default theme if the pack is absent.
+
+**Housekeeping:** stripped __MACOSX shadow dirs + AppleDouble files and root
+zips whose contents were already extracted (~13MB junk); `assets/CREDITS.txt`
+records used-asset attribution (owner to verify items marked); ASSETS_README
+documents the manifest. Lorc icon 7z left unextracted (no 7z in env). Reserved
+for later passes: Ravenmore + Lorc icons (ability buttons), FireLoop/fireball
+FX, town/terrain/overworld tilesets (M6), controller prompt packs, LPC pieces.
+
+**Test status:** `133/133 passed (973 asserts)`; full 26k-asset import clean
+(2m27s first pass); game boots clean. New coverage: manifest resolution,
+curated sprite/backdrop/music lookups, root-window theme + textured button
+skin, missing-asset fallbacks still null-safe.
+
+**Deviations:** none beyond the already-logged asset-pass extension.

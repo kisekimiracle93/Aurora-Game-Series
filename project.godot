@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.6", "Mobile")
 [autoload]
 
 MusicManager="*res://world/music_manager.gd"
+UiTheme="*res://world/theme_manager.gd"
 
 [debug]
 

@@ -23,10 +23,13 @@ func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1
 	if art != null:
 		sprite = Sprite2D.new()
 		sprite.texture = art
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # crisp pixel art
 		var height: float = float(art.get_height())
 		if height > 0.0:
-			var fit: float = (BODY_SIZE.y * 1.4) / height
+			# Integer upscale keeps pixels square; bottom-align with the old box.
+			var fit: float = maxf(1.0, round((BODY_SIZE.y * 1.4) / height))
 			sprite.scale = Vector2(fit, fit)
+			sprite.position.y = (BODY_SIZE.y - height * fit) / 2.0
 		add_child(sprite)
 
 	_ring = ColorRect.new()
