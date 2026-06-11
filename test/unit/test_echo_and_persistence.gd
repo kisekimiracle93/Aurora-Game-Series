@@ -13,10 +13,10 @@ func after_each() -> void:
 
 
 func test_echo_gain_math() -> void:
-	# Dealing half the target's max HP: 25 * 0.5 = 12.5 points.
-	assert_almost_eq(EchoMath.gain_from_damage_dealt(170, 340), 12.5, EPS)
-	# Taking half your own max HP: 50 * 0.5 = 25 points.
-	assert_almost_eq(EchoMath.gain_from_damage_taken(170, 340), 25.0, EPS)
+	# Dealing damage worth half your own max HP: 60 * 0.5 = 30 points.
+	assert_almost_eq(EchoMath.gain_from_damage_dealt(170, 340), 30.0, EPS)
+	# Taking half your own max HP: 90 * 0.5 = 45 points.
+	assert_almost_eq(EchoMath.gain_from_damage_taken(170, 340), 45.0, EPS)
 	assert_almost_eq(EchoMath.gain_from_damage_dealt(0, 340), 0.0, EPS)
 	assert_almost_eq(EchoMath.gain_from_damage_taken(-5, 340), 0.0, EPS)
 

@@ -16,6 +16,6 @@ targeting = "single"
 statuses = [{"base_chance": 25.0, "base_duration": 1, "status_id": "freeze"}]
 requirements = {}
 delay_amount = 0
-darkness_cost = 12
+darkness_cost = 15
 heals = false
 resolve_gain = 0

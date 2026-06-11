@@ -16,6 +16,6 @@ targeting = "aoe"
 statuses = []
 requirements = {}
 delay_amount = 0
-darkness_cost = 25
+darkness_cost = 40
 heals = false
 resolve_gain = 0

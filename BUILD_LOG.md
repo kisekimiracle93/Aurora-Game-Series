@@ -343,3 +343,32 @@ status type, keeping the six-status scope intact.
 5. Is P3 a real payoff for Jecht/Mati (Ice now rips; armor shed)?
 6. Overall: hard but fair? How many retries did it take, and did the −15 Resolve
    retry penalty change how the rematch felt?
+
+---
+
+## Checkpoint feedback pass (post-M5 build, pre-boss-verdict) — tuning + UI fix
+
+Human played the skirmish with the M4/M5 build. Verdict: characters felt
+different, Aether costs forced real choices, Pray worked, damage "dangerous"
+with real wolves-vs-stag triage. Three problems reported, all fixed:
+
+1. **Action menu covered the first HUD panel** → command menus now bottom-anchor
+   just above the HUD (deferred placement after the menu rebuilds), never
+   overlapping character info.
+2. **Echo gauge never filled → Echoes never used.** Root cause: dealt-gain was
+   normalized by the TARGET's max HP, so chipping a 1500 HP boss gave ~nothing.
+   Gains are now normalized by the attacker's own max HP and retuned:
+   dealt 25→**60** pts per 100% own-HP-worth of damage; taken 50→**90** pts per
+   100% of own HP. A character now reaches a first Echo in roughly 4-6 solid
+   hits or 2-3 heavy hits taken.
+3. **Darkness never built meaningfully.** Heir costs raised: Rime Rend 12→**15**,
+   Absolute Zero 20→**30**, Throne of Winter 25→**40**, Hymn of Snowfall 8→**10**.
+   A dark-leaning Jecht can now realistically flirt with the forced-KO
+   threshold inside one long fight (the temptation mechanic, working).
+
+**Test status:** `126/126 passed (936 asserts)` — updated gauge/darkness tests;
+boots clean. PLAYTEST CHECKPOINT 3 (boss verdict) still open.
+
+**Next discussion queued by the human:** free / AI-generated assets (3D + music)
+to dress the slice. Note the locked slice scope says grey-box 2D + CC0 sprites
+if supplied; a 3D port would be a logged deviation to decide deliberately.

@@ -131,7 +131,7 @@ func test_absolute_zero_costs_darkness_and_hits_every_enemy() -> void:
 			actor.abilities.find_by_id("absolute_zero"), _encounter.living(_encounter.enemies)
 		))
 	_encounter.start()
-	assert_almost_eq(jecht.meters.darkness(), 20.0, 0.0001, "the Heir pays in Darkness")
+	assert_almost_eq(jecht.meters.darkness(), 30.0, 0.0001, "the Heir pays in Darkness")
 	for action: Dictionary in _actions:
 		if action["ability_id"] == "absolute_zero":
 			var results: Array[Dictionary] = action["results"]

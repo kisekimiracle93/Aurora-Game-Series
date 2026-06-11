@@ -144,7 +144,7 @@ func test_damage_grants_echo_and_erodes_target_resolve() -> void:
 	assert_gt(damage, 0)
 	assert_almost_eq(
 		attacker.meters.echo(),
-		EchoMath.gain_from_damage_dealt(damage, victim.stats.max_hp()),
+		EchoMath.gain_from_damage_dealt(damage, attacker.stats.max_hp()),
 		EPS
 	)
 	assert_almost_eq(

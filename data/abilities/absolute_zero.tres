@@ -16,6 +16,6 @@ targeting = "aoe"
 statuses = [{"base_chance": 40.0, "base_duration": 2, "status_id": "slow"}]
 requirements = {}
 delay_amount = 0
-darkness_cost = 20
+darkness_cost = 30
 heals = false
 resolve_gain = 0

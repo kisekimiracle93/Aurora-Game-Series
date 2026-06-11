@@ -24,6 +24,9 @@ const PHASE_TINTS: Dictionary = {
 	3: Color(0.13, 0.07, 0.10),
 }
 
+## Y of the party HUD strip; command menus bottom-anchor just above it.
+const HUD_TOP: float = 556.0
+
 ## "wolfpack" (M4 trash fight) or "boss" (M5 Frozen Shepherd arena).
 @export var roster: String = "wolfpack"
 
@@ -201,15 +204,25 @@ func _build_ui() -> void:
 	hud.setup(party)
 
 	action_menu = ActionMenu.new()
-	action_menu.position = Vector2(16, 400)
+	action_menu.position = Vector2(16, 300)
 	add_child(action_menu)
 	action_menu.ability_chosen.connect(_on_ability_chosen)
 
 	target_select = TargetSelect.new()
-	target_select.position = Vector2(16, 400)
+	target_select.position = Vector2(16, 300)
 	add_child(target_select)
 	target_select.target_chosen.connect(_on_target_chosen)
 	target_select.cancelled.connect(_on_target_cancelled)
+
+
+## Bottom-anchor a menu just above the party HUD so it never covers the panels.
+## Deferred: open_for() queue_frees old buttons, which pollute the size until
+## end of frame.
+func _place_menu_above_hud(menu: Control) -> void:
+	if not menu.visible:
+		return
+	menu.reset_size()
+	menu.position = Vector2(16, HUD_TOP - menu.get_combined_minimum_size().y - 10.0)
 
 
 func _on_turn_started(actor: BaseCombatant) -> void:
@@ -221,6 +234,7 @@ func _on_turn_started(actor: BaseCombatant) -> void:
 func _on_player_turn(actor: BaseCombatant) -> void:
 	target_select.close()
 	action_menu.open_for(actor)
+	_place_menu_above_hud.call_deferred(action_menu)
 
 
 func _on_ability_chosen(ability: AbilityData) -> void:
@@ -237,6 +251,7 @@ func _on_ability_chosen(ability: AbilityData) -> void:
 		encounter.submit_player_action(ability, candidates)
 		return
 	target_select.open_for(candidates)
+	_place_menu_above_hud.call_deferred(target_select)
 
 
 func _on_target_chosen(target: BaseCombatant) -> void:
@@ -247,6 +262,7 @@ func _on_target_chosen(target: BaseCombatant) -> void:
 func _on_target_cancelled() -> void:
 	target_select.close()
 	action_menu.open_for(encounter.current_actor)
+	_place_menu_above_hud.call_deferred(action_menu)
 
 
 func _on_battle_ended(victory: bool) -> void:

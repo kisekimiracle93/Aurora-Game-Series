@@ -145,9 +145,10 @@ static func _apply_damage(
 	target.stats.take_damage(damage)
 	result["damage"] = damage
 
-	# Echo gains (no-ops for combatants without an echo meter).
+	# Echo gains (no-ops for combatants without an echo meter). Dealt-gain is
+	# normalized by the attacker's own bulk so boss HP pools don't starve it.
 	actor.meters.add(
-		MetersComponent.ECHO, EchoMath.gain_from_damage_dealt(damage, target.stats.max_hp())
+		MetersComponent.ECHO, EchoMath.gain_from_damage_dealt(damage, actor.stats.max_hp())
 	)
 	target.meters.add(
 		MetersComponent.ECHO, EchoMath.gain_from_damage_taken(damage, target.stats.max_hp())
