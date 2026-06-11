@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bwh8oui8173l2"
+path="res://.godot/imported/Redletter.mp3-56adcc40803f3fe623d631e79ad0357f.mp3str"
+
+[deps]
+
+source_file="res://assets/all files/Redletter.mp3"
+dest_files=["res://.godot/imported/Redletter.mp3-56adcc40803f3fe623d631e79ad0357f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://g5sh616mirgq"
+path="res://.godot/imported/Canon in D for Two Renaissance Harps.mp3-c7f286d07bddd679e7c1246ebdf3f4d4.mp3str"
+
+[deps]
+
+source_file="res://assets/all files/Canon in D for Two Renaissance Harps.mp3"
+dest_files=["res://.godot/imported/Canon in D for Two Renaissance Harps.mp3-c7f286d07bddd679e7c1246ebdf3f4d4.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

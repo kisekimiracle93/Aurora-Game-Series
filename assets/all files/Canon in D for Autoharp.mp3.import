@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bxnpdt6hs7i5f"
+path="res://.godot/imported/Canon in D for Autoharp.mp3-25de21dc77cf631a2e7d59de07fde6f2.mp3str"
+
+[deps]
+
+source_file="res://assets/all files/Canon in D for Autoharp.mp3"
+dest_files=["res://.godot/imported/Canon in D for Autoharp.mp3-25de21dc77cf631a2e7d59de07fde6f2.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

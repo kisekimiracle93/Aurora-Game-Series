@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://ydvm4dvsfnif"
+path="res://.godot/imported/Stormfront.mp3-27bf2b6197ab624c362fe5b88841d35e.mp3str"
+
+[deps]
+
+source_file="res://assets/all files/Stormfront.mp3"
+dest_files=["res://.godot/imported/Stormfront.mp3-27bf2b6197ab624c362fe5b88841d35e.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
