@@ -211,11 +211,17 @@ func _build_menu() -> void:
 	_menu_box.custom_minimum_size = Vector2(200, 0)
 	_menu_box.add_theme_constant_override("separation", 12)
 	add_child(_menu_box)
-	var start: Button = _menu_button("Start")
-	start.pressed.connect(
-		func() -> void: get_tree().change_scene_to_file("res://world/fight_select.tscn")
-	)
+	var world: Node = get_node_or_null("/root/WorldState")
+	var start: Button = _menu_button("New Pilgrimage")
+	start.pressed.connect(func() -> void:
+		if world != null:
+			world.start_new_run(get_tree())
+		else:
+			get_tree().change_scene_to_file("res://world/town.tscn"))
 	start.grab_focus()
+	if world != null and world.has_save():
+		var resume: Button = _menu_button("Continue")
+		resume.pressed.connect(func() -> void: world.continue_run(get_tree()))
 	var playtest: Button = _menu_button("Playtest")
 	playtest.pressed.connect(func() -> void: _toggle(_playtest_panel))
 	var options: Button = _menu_button("Options")
@@ -264,12 +270,26 @@ func _build_playtest_panel() -> void:
 	box.add_child(title)
 	_jump_button(box, "Skirmish — Wolves & Stag", "res://world/battle_test.tscn")
 	_jump_button(box, "Boss — The Frozen Shepherd", "res://world/boss_test.tscn")
-	for coming: String in ["Town (M6)", "Outside Area (M6)", "Dungeon (M6)"]:
-		var stub: Button = Button.new()
-		stub.text = coming
-		stub.disabled = true
-		stub.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		box.add_child(stub)
+	var spots: Label = Label.new()
+	spots.text = "WORLD SPOTS (fresh run)"
+	spots.add_theme_font_size_override("font_size", 12)
+	spots.modulate = Color(0.7, 0.7, 0.75)
+	box.add_child(spots)
+	for spot: Array in [
+		["Town — Aethertown", "res://world/town.tscn"],
+		["Outside — Crystal Fields", "res://world/outside.tscn"],
+		["Dungeon — Crystal Site", "res://world/dungeon.tscn"],
+	]:
+		var jump: Button = Button.new()
+		jump.text = String(spot[0])
+		jump.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		jump.pressed.connect(func() -> void:
+			var world: Node = get_node_or_null("/root/WorldState")
+			if world != null:
+				world.start_run_at(get_tree(), String(spot[1]))
+			else:
+				get_tree().change_scene_to_file(String(spot[1])))
+		box.add_child(jump)
 
 
 func _jump_button(box: VBoxContainer, text: String, scene_path: String) -> void:

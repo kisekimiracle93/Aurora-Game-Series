@@ -507,3 +507,72 @@ battle scene boots with the gold arrow locked to the active actor.
 
 **Open:** harmless ObjectDB leak warning at forced quit (autoload audio
 streams at exit) — cosmetic, headless-only.
+
+---
+
+## Cinematic combat pass (human-directed, post-checkpoint feel notes)
+
+Human verdict on the feedback build: "sounds all working... it all felt good."
+Asked for grander, slower, heavier presentation. Built:
+
+- **Presenter pacing**: `CombatEncounter` gained optional async presenter gates —
+  with no presenter attached every action resolves instantly (all logic tests
+  stay synchronous; presenter also auto-disables headless). Boss script routed
+  through the same gates. Action rhythm: stride in (0.28s) → declaration +
+  windup hold → impact (all existing FX) → weight + follow hold → stride back.
+  Basics ~2s, spells ~3s, **echoes ~5s with Engine.time_scale 0.55 slow-mo**,
+  guard/pray brace backward instead.
+- **Stone narrator** (`DeclarationBanner`): letterspaced stone slab center-stage
+  declaring every action ("B A S T I L — O A T H F I R E  S T R I K E"), gold
+  for party, red for enemies, crumble-fade on followthrough. Combat log moved
+  to a corner history panel.
+- **Screen weight**: stage layer (world shakes, UI doesn't), elemental
+  full-screen flash tints, X-slash carving the screen on heavy hits (coeff
+  ≥2.2 / echoes), per-hit stage shake scaled by gravity of the blow.
+- **Blood & violence FX**: arterial spray on physical wounds (bigger on crits),
+  lingering blood pools on kills, Options toggle (default on).
+- **Controller**: ui_cancel (gamepad B / Esc) backs out of target selection;
+  all menus already navigate via D-pad/stick + A through Godot's focus system.
+
+## M6 — World: town, outside area, dungeon — BUILT, awaiting PLAYTEST CHECKPOINT 4
+
+- **`WorldState` autoload**: run lifecycle (new/continue/reset), party meter
+  persistence across scenes and battles, merc-hired flag, battle hand-off
+  (pending roster + return scene/position), defeat retry penalty, save-point
+  rest (drain Darkness, Resolve floor 75, write save), per-run flags
+  (gauntlet cleared, boss cleared).
+- **`PlayerAvatar`** (WASD/arrows/left stick, E/Enter/gamepad-A interact — new
+  input map) + **`AreaBase`** scaffold: bounds, exits, interactables with
+  prompts, sequential dialog, step-based random encounters.
+- **Aethertown**: save crystal (rest+save), merc post (hire/dismiss the
+  Lancer), shop stub, two lore NPCs, road to the fields.
+- **Crystal Fields**: solid scenery, random encounters every ~260-430 walked px
+  (rosters: wolves_2/wolves_3/stag_hunt/wolfpack), exits town/dungeon.
+- **Crystal Site dungeon**: three zones — scripted gauntlet pack (once per
+  run), memory crystal (M7 stub dialog), boss door → Frozen Shepherd; "slice
+  complete" dialog after the boss falls.
+- **Battle integration**: world battles consume the pending roster
+  (`enemy_paths_for` compositions), pull meters from WorldState, include the
+  merc only when hired; world end-overlay = Continue / Retry(−15) / Limp back
+  to town(−15); boss victory sets `boss_cleared`. Standalone Playtest jumps
+  unchanged. Main menu: **New Pilgrimage** (fresh run → town), **Continue**
+  (from save), Playtest world spots now live.
+
+**Test status:** `146/146 passed (1076 asserts)`; boots clean. New coverage:
+run defaults, snapshot/apply round-trip, roster-wide retry penalty, rest+save
+persistence (darkness drained, floor applied, file round-trip), pending-roster
+hand-off, roster compositions, all three world scenes boot with a player, and
+a world-mode battle honoring meters + merc flag + roster.
+
+**▶ PLAYTEST CHECKPOINT 4 — what to test (`godot --path .` → New Pilgrimage):**
+
+1. Walk town → fields → dungeon → boss; do exits/prompts/dialog read?
+2. Random encounters in the fields: frequency feel? Battles return you to
+   where you stood?
+3. Save crystal: Darkness drained, Resolve restored, then quit → Continue
+   resumes in town?
+4. Hire the Lancer; does he appear in the next fight (and stay home if
+   dismissed)?
+5. Lose on purpose: Retry (−15 Resolve) and Limp-back-to-town both behave?
+6. The cinematic layer: strides, stone declarations, X-slash, blood — grand
+   without dragging? (Pacing knobs: `ActionPresenter.PACING`.)

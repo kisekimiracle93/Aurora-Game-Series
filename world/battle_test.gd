@@ -57,6 +57,26 @@ var _target_arrow: SelectionArrow
 ## while the UI stays rock steady.
 var stage: Node2D
 var presenter: ActionPresenter
+## Set when this battle was launched from the world flow (WorldState pending).
+var world_mode: bool = false
+var world_roster: String = ""
+
+
+## Encounter compositions per roster id (world flow + playtest variety).
+static func enemy_paths_for(roster_id: String) -> Array[String]:
+	const WOLF: String = "res://data/enemies/aether_wolf.tres"
+	const STAG: String = "res://data/enemies/icebound_stag.tres"
+	match roster_id:
+		"wolves_2":
+			return [WOLF, WOLF]
+		"wolves_3":
+			return [WOLF, WOLF, WOLF]
+		"stag_hunt":
+			return [STAG, WOLF]
+		"dungeon_gauntlet":
+			return [WOLF, STAG, WOLF]
+		_:
+			return [WOLF, WOLF, STAG]  # classic wolfpack
 
 
 func _ready() -> void:
@@ -83,6 +103,14 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	pending_ability = null
 	boss_controller = null
 	_add_slot = 0
+
+	# World hand-off: a pending roster means we arrived from town/field/dungeon.
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null and world.in_world_run and String(world.pending_roster) != "":
+		world_mode = true
+		world_roster = String(world.consume_pending_roster())
+		if world_roster != "boss":
+			roster = world_roster
 
 	stage = Node2D.new()
 	stage.name = "Stage"
@@ -157,11 +185,17 @@ const ENEMY_SLOTS: Array[Vector2] = [
 
 
 func _spawn_party(is_defeat_retry: bool) -> void:
+	var world: Node = get_node_or_null("/root/WorldState")
 	for i: int in range(PARTY_PATHS.size()):
 		var data: CharacterData = load(PARTY_PATHS[i])
+		if world_mode and data.is_merc and world != null and not world.merc_hired:
+			continue  # the Lancer only marches if hired in town
 		var member: BaseCombatant = BaseCombatant.from_character(data)
-		_apply_carried_meters(member, is_defeat_retry)
-		member.position = PARTY_SLOTS[i % PARTY_SLOTS.size()]
+		if world_mode and world != null:
+			world.apply_to_member(member)
+		else:
+			_apply_carried_meters(member, is_defeat_retry)
+		member.position = PARTY_SLOTS[party.size() % PARTY_SLOTS.size()]
 		stage.add_child(member)
 		party.append(member)
 		var color: Color = PARTY_COLOR
@@ -173,9 +207,12 @@ func _spawn_party(is_defeat_retry: bool) -> void:
 
 
 func _spawn_enemies() -> void:
+	var paths: Array[String] = (
+		enemy_paths_for(roster) if world_mode or roster != "wolfpack" else ENEMY_PATHS
+	)
 	var name_counts: Dictionary = {}
-	for i: int in range(ENEMY_PATHS.size()):
-		var data: EnemyData = load(ENEMY_PATHS[i])
+	for i: int in range(paths.size()):
+		var data: EnemyData = load(paths[i])
 		var enemy: BaseCombatant = BaseCombatant.from_enemy(data)
 		name_counts[data.name] = int(name_counts.get(data.name, 0)) + 1
 		if int(name_counts[data.name]) > 1 or ENEMY_PATHS.count(ENEMY_PATHS[i]) > 1:
@@ -476,6 +513,7 @@ func _on_battle_ended(victory: bool) -> void:
 
 
 func _show_end_overlay(victory: bool) -> void:
+	var world: Node = get_node_or_null("/root/WorldState")
 	var overlay: PanelContainer = PanelContainer.new()
 	overlay.custom_minimum_size = Vector2(420, 0)
 	overlay.position = Vector2(430, 270)
@@ -500,6 +538,40 @@ func _show_end_overlay(victory: bool) -> void:
 		else "Retrying lowers everyone's Resolve by %d." % int(SaveSystem.RETRY_RESOLVE_PENALTY)
 	)
 	box.add_child(body)
+
+	if world_mode and world != null:
+		if victory:
+			if world_roster == "boss":
+				world.boss_cleared = true
+			var go_on: Button = Button.new()
+			go_on.text = "Continue the pilgrimage"
+			go_on.pressed.connect(func() -> void:
+				world.finish_battle(get_tree(), party, true))
+			box.add_child(go_on)
+			go_on.grab_focus()
+		else:
+			var retry: Button = Button.new()
+			retry.text = "Retry (Resolve -%d)" % int(SaveSystem.RETRY_RESOLVE_PENALTY)
+			retry.pressed.connect(func() -> void:
+				world.apply_retry_penalty()
+				world.pending_roster = world_roster
+				call_deferred("_start_battle", false))
+			box.add_child(retry)
+			retry.grab_focus()
+			var flee: Button = Button.new()
+			flee.text = "Limp back to town (Resolve -%d)" % int(SaveSystem.RETRY_RESOLVE_PENALTY)
+			flee.pressed.connect(func() -> void:
+				world.return_scene = world.TOWN_SCENE
+				world.has_return_position = false
+				world.finish_battle(get_tree(), party, false))
+			box.add_child(flee)
+		var menu_btn: Button = Button.new()
+		menu_btn.text = "Main menu"
+		menu_btn.pressed.connect(
+			func() -> void: get_tree().change_scene_to_file("res://world/main_menu.tscn")
+		)
+		box.add_child(menu_btn)
+		return
 
 	var again: Button = Button.new()
 	again.text = "Fight again" if victory else "Retry (Resolve -%d)" % int(SaveSystem.RETRY_RESOLVE_PENALTY)
