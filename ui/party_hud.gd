@@ -104,6 +104,12 @@ func _refresh(member: BaseCombatant) -> void:
 	_set_bar(controls["resolve"], int(member.meters.resolve()), int(MeterMath.RESOLVE_MAX), true)
 	_set_bar(controls["duty"], int(member.meters.duty()), int(MeterMath.DUTY_MAX), false)
 	_set_bar(controls["burden"], int(member.meters.burden()), int(MeterMath.BURDEN_MAX), false)
+	var burden_bar: ProgressBar = controls["burden"]["bar"]
+	var burden_style: StyleBoxFlat = burden_bar.get_theme_stylebox("fill")
+	burden_style.bg_color = (
+		Color(0.95, 0.25, 0.2) if MeterMath.is_burden_dragging(member.meters.burden())
+		else Color(0.6, 0.45, 0.4)
+	)
 	var resolve_bar: ProgressBar = controls["resolve"]["bar"]
 	var fill_style: StyleBoxFlat = resolve_bar.get_theme_stylebox("fill")
 	fill_style.bg_color = BAND_COLORS[band]

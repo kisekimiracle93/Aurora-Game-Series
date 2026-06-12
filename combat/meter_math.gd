@@ -70,6 +70,9 @@ const DUTY_DEFAULT: float = 50.0
 const BURDEN_MIN: float = 0.0
 const BURDEN_MAX: float = 100.0
 const BURDEN_ECHO_LOCK: float = 80.0
+## At >= 50 Burden every action's CT cost climbs (GDD: +CT cost when heavy).
+const BURDEN_DRAG_THRESHOLD: float = 50.0
+const BURDEN_CT_COST_MULT: float = 1.15
 
 
 static func duty_damage_mult(duty: float) -> float:
@@ -90,3 +93,7 @@ static func burden_speed_mult(burden: float) -> float:
 
 static func is_echo_locked_by_burden(burden: float) -> bool:
 	return burden >= BURDEN_ECHO_LOCK
+
+
+static func is_burden_dragging(burden: float) -> bool:
+	return burden >= BURDEN_DRAG_THRESHOLD

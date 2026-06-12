@@ -227,10 +227,33 @@ static func _additive() -> CanvasItemMaterial:
 static func spell_cinematic(
 	parent: Node, caster_pos: Vector2, target_pos: Vector2, element: String, big: bool = false
 ) -> void:
+	caster_glyph(parent, caster_pos, element)
 	caster_aura(parent, caster_pos, element)
 	sky_pillar(parent, target_pos, element, big)
 	ground_rings(parent, target_pos, element, big)
 	elemental_storm(parent, target_pos, element, big)
+
+
+## FF-style summoning circle: twin counter-rotating arc rings under the caster.
+static func caster_glyph(parent: Node, pos: Vector2, element: String) -> void:
+	var glow: Color = ELEMENT_GLOW.get(element, ELEMENT_GLOW["Neutral"])
+	for spin: float in [1.0, -1.4]:
+		var glyph: Node2D = Node2D.new()
+		glyph.position = pos + Vector2(0, 26)
+		glyph.z_index = 41
+		glyph.material = _additive()
+		glyph.draw.connect(func() -> void:
+			glyph.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.34))
+			for arc: int in range(3):
+				var start: float = TAU * float(arc) / 3.0
+				glyph.draw_arc(Vector2.ZERO, 52.0 + 8.0 * absf(spin), start, start + 1.6,
+					18, Color(glow, 0.95), 4.0))
+		parent.add_child(glyph)
+		var tween: Tween = glyph.create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(glyph, "rotation", spin * TAU, 1.0)
+		tween.tween_property(glyph, "modulate:a", 0.0, 1.0).set_delay(0.35)
+		tween.chain().tween_callback(glyph.queue_free)
 
 
 static func caster_aura(parent: Node, pos: Vector2, element: String) -> void:
@@ -258,7 +281,7 @@ static func caster_aura(parent: Node, pos: Vector2, element: String) -> void:
 
 static func sky_pillar(parent: Node, target_pos: Vector2, element: String, big: bool) -> void:
 	var glow: Color = ELEMENT_GLOW.get(element, ELEMENT_GLOW["Neutral"])
-	var width: float = 150.0 if big else 100.0
+	var width: float = 190.0 if big else 130.0
 	var pillar: ColorRect = ColorRect.new()
 	pillar.material = _additive()
 	pillar.color = Color(glow, 0.0)
@@ -270,7 +293,7 @@ static func sky_pillar(parent: Node, target_pos: Vector2, element: String, big: 
 	parent.add_child(pillar)
 	var tween: Tween = pillar.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(pillar, "color:a", 0.75 if big else 0.55, 0.12)
+	tween.tween_property(pillar, "color:a", 0.9 if big else 0.7, 0.12)
 	tween.tween_property(pillar, "scale:x", 1.0, 0.22)\
 		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_interval(0.28 if big else 0.16)
@@ -311,13 +334,13 @@ static func elemental_storm(
 	storm.one_shot = true
 	storm.explosiveness = 0.85
 	storm.lifetime = 0.95
-	storm.amount = 110 if big else 70
+	storm.amount = 160 if big else 100
 	storm.spread = 180.0
 	storm.gravity = Vector2(0, -170) if element == "Fire" else Vector2(0, 260)
 	storm.initial_velocity_min = 120.0
 	storm.initial_velocity_max = 300.0 if big else 240.0
 	storm.scale_amount_min = 2.5
-	storm.scale_amount_max = 7.0 if big else 5.5
+	storm.scale_amount_max = 8.5 if big else 6.5
 	storm.color = glow
 	storm.z_index = 45
 	parent.add_child(storm)

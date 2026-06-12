@@ -62,13 +62,13 @@ func start() -> void:
 const REACTIONS: Array[Dictionary] = [
 	{
 		"member": "Mati", "enemy_contains": "Wolf",
-		"meter": MetersComponent.RESOLVE, "delta": -10.0,
-		"line": "Mati falters — she has feared the wolves since the village burned. (Resolve -10)",
+		"meter": MetersComponent.RESOLVE, "delta": -15.0,
+		"line": "Mati falters — she has feared the wolves since the village burned. (Resolve -15)",
 	},
 	{
 		"member": "Bastil", "enemy_contains": "Bandit",
-		"meter": MetersComponent.DUTY, "delta": 10.0,
-		"line": "Bastil squares his shoulders — these roads are his to keep. (Duty +10)",
+		"meter": MetersComponent.DUTY, "delta": 12.0,
+		"line": "Bastil squares his shoulders — these roads are his to keep. (Duty +12)",
 	},
 	{
 		"member": "Jecht", "enemy_contains": "Stag",
@@ -285,6 +285,9 @@ func _execute(actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCom
 	var ct_cost: int = ability.ct_cost
 	if ability.ability_type == "echo":  # conviction makes the deed cheaper
 		ct_cost = int(round(ct_cost * MeterMath.duty_echo_cost_mult(actor.duty_for_math())))
+	if MeterMath.is_burden_dragging(actor.burden_for_math()):
+		ct_cost = int(round(ct_cost * MeterMath.BURDEN_CT_COST_MULT))
+		_log("%s moves heavily under the weight." % actor.display_name)
 	actor.ctb.pay_action_cost(ct_cost)
 	_emit_timeline()
 	_check_end()

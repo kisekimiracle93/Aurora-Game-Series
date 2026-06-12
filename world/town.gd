@@ -202,39 +202,39 @@ func _build_npcs_and_quests() -> void:
 	# --- Choice quests: words that weigh on the meters --------------------------
 	_add_quest_npc("quest_letter", Vector2(700, 980), Color(0.75, 0.6, 0.5), "Courier",
 		"Courier: 'This letter proves the miller's husband cheats at dice — and worse. Deliver the truth to her, or burn it and spare the house the shame?'", [
-		{"label": "Deliver the truth (Duty +10, Resolve +5)", "callback": func() -> void:
-			_world.adjust_party_meter("duty", 10.0)
-			_world.adjust_party_meter("resolve", 5.0)
+		{"label": "Deliver the truth (Duty +14, Resolve +8)", "callback": func() -> void:
+			_world.adjust_party_meter("duty", 14.0)
+			_world.adjust_party_meter("resolve", 8.0)
 			show_dialog(["The miller's wife reads it twice, thanks you once, and bars her door.",
 				"Truth is a cold gift, but a gift."])},
-		{"label": "Burn it (Burden +10, Heirs Darkness +5)", "callback": func() -> void:
-			_world.adjust_party_meter("burden", 10.0)
-			_world.adjust_party_meter("darkness", 5.0)
+		{"label": "Burn it (Burden +15, Heirs Darkness +8)", "callback": func() -> void:
+			_world.adjust_party_meter("burden", 15.0)
+			_world.adjust_party_meter("darkness", 8.0)
 			show_dialog(["The letter curls to ash. The lie keeps a roof warm tonight.",
 				"Something of it clings to your hands anyway."])},
 	])
 	_add_quest_npc("quest_smuggler", Vector2(1250, 1100), Color(0.6, 0.65, 0.6), "Nervous man",
 		"Nervous man: 'The guards are coming for the grain smuggler tonight. He feeds half the poor quarter. Warn him — or let the law have him?'", [
-		{"label": "Warn the smuggler (Resolve +8, Burden +8)", "callback": func() -> void:
-			_world.adjust_party_meter("resolve", 8.0)
-			_world.adjust_party_meter("burden", 8.0)
+		{"label": "Warn the smuggler (Resolve +10, Burden +12)", "callback": func() -> void:
+			_world.adjust_party_meter("resolve", 10.0)
+			_world.adjust_party_meter("burden", 12.0)
 			show_dialog(["He's gone before the lanterns turn the corner. The poor quarter eats.",
 				"The law remembers faces, though. Yours included."])},
-		{"label": "Alert the guards (Duty +12, Resolve -5)", "callback": func() -> void:
-			_world.adjust_party_meter("duty", 12.0)
-			_world.adjust_party_meter("resolve", -5.0)
+		{"label": "Alert the guards (Duty +15, Resolve -6)", "callback": func() -> void:
+			_world.adjust_party_meter("duty", 15.0)
+			_world.adjust_party_meter("resolve", -6.0)
 			show_dialog(["They take him quietly. The captain nods at you like a colleague.",
 				"It was the lawful thing. The street is very quiet."])},
 	])
 	_add_quest_npc("quest_festival", Vector2(560, 250), Color(0.8, 0.7, 0.85), "Old acolyte",
 		"Old acolyte: 'The Festival of First Light... the \"miracle\" was lamp-oil and mirrors. I rigged it myself, forty years past. Should the town know?'", [
-		{"label": "Tell the town the truth (Duty +8, Resolve -8)", "callback": func() -> void:
-			_world.adjust_party_meter("duty", 8.0)
+		{"label": "Tell the town the truth (Duty +12, Resolve -8)", "callback": func() -> void:
+			_world.adjust_party_meter("duty", 12.0)
 			_world.adjust_party_meter("resolve", -8.0)
 			show_dialog(["Some thank you. Most don't. The festival lanterns look dimmer now to everyone.",
 				"Truth costs what it costs."])},
-		{"label": "Let the town keep its miracle (Burden +8)", "callback": func() -> void:
-			_world.adjust_party_meter("burden", 8.0)
+		{"label": "Let the town keep its miracle (Burden +12)", "callback": func() -> void:
+			_world.adjust_party_meter("burden", 12.0)
 			show_dialog(["The old man nods, relieved and ashamed in the same breath.",
 				"You carry the secret out the door with you."])},
 	])
@@ -268,12 +268,6 @@ func _add_quest_npc(
 		if _world.quests_done.has(quest_id):
 			show_dialog(["%s: 'It's done. No taking it back now.'" % npc_name])
 			return
-		show_choice(prompt_text, options.map(func(option: Dictionary) -> Dictionary:
-			return {
-				"label": option["label"],
-				"callback": func() -> void:
-					_world.quests_done.append(quest_id)
-					marker.visible = false
-					var inner: Callable = option["callback"]
-					inner.call(),
-			})))
+		_world.quests_done.append(quest_id)  # committed the moment the choice opens
+		marker.visible = false
+		show_choice(prompt_text, options))

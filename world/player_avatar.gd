@@ -18,7 +18,9 @@ func _ready() -> void:
 	add_child(shape)
 
 	var art: Texture2D = AssetLibrary.texture("characters", "Bastil")
-	if art != null:
+	if WalkerSprite.attach(self, "Bastil", 2.0):
+		_sprite_set = true
+	elif art != null:
 		var sprite: Sprite2D = Sprite2D.new()
 		sprite.texture = art
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

@@ -13,7 +13,8 @@ func _init() -> void:
 
 
 func _setup_area() -> void:
-	add_rect(Rect2(Vector2.ZERO, map_size), Color(0.62, 0.67, 0.73), -10)  # deep snow
+	add_rect(Rect2(Vector2.ZERO, map_size), Color(0.78, 0.82, 0.88), -10)  # deep snow
+	_build_ground_detail()
 	_build_terrain()
 	_build_river_and_falls()
 	_build_foes()
@@ -52,30 +53,79 @@ func _prop(prop_name: String, pos: Vector2, prop_scale: float = 2.0, solid: bool
 		add_wall(Rect2(pos - size / 2.0, size))
 
 
+## Soft tonal mottling + the trodden trail: kills the flat-color blandness.
+func _build_ground_detail() -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 20
+	var mottle: Node2D = Node2D.new()
+	mottle.z_index = -9
+	mottle.draw.connect(func() -> void:
+		for i: int in range(160):
+			var spot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+			spot_rng.seed = 100 + i
+			var pos: Vector2 = Vector2(
+				spot_rng.randf_range(0, map_size.x), spot_rng.randf_range(0, map_size.y)
+			)
+			var dark: bool = spot_rng.randf() < 0.5
+			mottle.draw_circle(
+				pos,
+				spot_rng.randf_range(18.0, 70.0),
+				Color(0.55, 0.6, 0.7, 0.10) if dark else Color(1.0, 1.0, 1.0, 0.14)
+			))
+	add_child(mottle)
+	# The pilgrim trail: a worn dirt path west gate -> falls crossing -> east gate.
+	for segment: Rect2 in [
+		Rect2(0, 660, 760, 84), Rect2(700, 540, 84, 200), Rect2(700, 470, 700, 84),
+		Rect2(1330, 470, 84, 250), Rect2(1330, 640, 1230, 84),
+	]:
+		add_rect(segment, Color(0.52, 0.44, 0.34, 0.85), -8)
+
+
 func _build_terrain() -> void:
-	# Cliff walls crown the north and shoulder the south-east.
-	for x: float in [180.0, 420.0, 660.0, 1500.0, 1740.0, 1980.0]:
-		_prop("cliff_tall", Vector2(x, 170), 2.2)
-	for pos: Vector2 in [Vector2(2280, 1380), Vector2(2050, 1450)]:
-		_prop("cliff_left", pos, 2.0)
-	# Pine woods, west and center.
+	# A contiguous cliff rampart seals the whole northern edge.
+	var cliff: Texture2D = AssetLibrary.texture("props", "cliff_tall")
+	if cliff != null:
+		var step: float = cliff.get_width() * 2.2
+		var x: float = step / 2.0
+		while x < map_size.x - 40.0:
+			_prop("cliff_tall", Vector2(x, 170), 2.2, false)
+			x += step - 8.0
+		add_wall(Rect2(0, 0, map_size.x, 320))
+	# Southern ridge of low cliffs with a forest skirt.
+	for x: float in [260.0, 460.0, 1700.0, 1900.0, 2100.0, 2300.0]:
+		_prop("cliff_left", Vector2(x, 1480), 2.0)
+	# Forests: a western wood and a mid-field grove (tree WALLS, not confetti).
 	for pos: Vector2 in [
-		Vector2(330, 760), Vector2(450, 900), Vector2(260, 1060), Vector2(560, 1180),
-		Vector2(1120, 420), Vector2(1240, 520), Vector2(1010, 540),
+		Vector2(180, 800), Vector2(290, 860), Vector2(400, 920), Vector2(510, 980),
+		Vector2(180, 980), Vector2(290, 1040), Vector2(180, 1160), Vector2(400, 1100),
+		Vector2(1060, 380), Vector2(1170, 420), Vector2(1010, 480),
+		Vector2(1640, 1060), Vector2(1750, 1120), Vector2(1860, 1180), Vector2(1640, 1220),
 	]:
 		_prop("pine_cluster", pos, 2.0)
-	# Rocks and ice teeth scattered across the open snow.
+	# Rocks + ice teeth in deliberate clusters near landmarks.
 	for pos: Vector2 in [
-		Vector2(880, 980), Vector2(1480, 760), Vector2(1960, 1040), Vector2(760, 1380),
+		Vector2(900, 980), Vector2(960, 1020), Vector2(2050, 900), Vector2(2110, 950),
 	]:
 		_prop("snow_rocks", pos, 2.0)
-	for pos: Vector2 in [Vector2(1820, 380), Vector2(640, 520), Vector2(2120, 800)]:
+	for pos: Vector2 in [Vector2(1500, 360), Vector2(560, 480), Vector2(2200, 540)]:
 		_prop("icicles", pos, 1.8)
+	# Fence posts shepherd the trail out of town.
+	var fence: Texture2D = AssetLibrary.texture("props", "fence")
+	if fence != null:
+		for x: float in [120.0, 260.0, 400.0, 540.0]:
+			for y: float in [620.0, 770.0]:
+				var post: Sprite2D = Sprite2D.new()
+				post.texture = fence
+				post.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				post.scale = Vector2(1.6, 1.6)
+				post.position = Vector2(x, y)
+				post.z_index = 2
+				add_child(post)
 	var hint: Label = Label.new()
 	hint.text = "The beasts keep to their grounds. Step into theirs, and they will not stay there."
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.modulate = Color(0.32, 0.34, 0.4)
-	hint.position = Vector2(820, 1540)
+	hint.position = Vector2(820, 1545)
 	add_child(hint)
 
 

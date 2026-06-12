@@ -22,6 +22,7 @@ var _home: Vector2
 var _waypoint_index: int = 0
 var _player: PlayerAvatar
 var _exclaim: Label
+var _beast_sprite: Sprite2D  # single-tile beasts flip to face their motion
 
 
 ## Pure decision rule — unit-testable without a scene.
@@ -59,13 +60,15 @@ func _ready() -> void:
 	circle.radius = 24.0
 	shape.shape = circle
 	add_child(shape)
-	var art: Texture2D = AssetLibrary.texture("characters", sprite_name)
-	if art != null:
-		var sprite: Sprite2D = Sprite2D.new()
-		sprite.texture = art
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		sprite.scale = Vector2(2.4, 2.4)
-		add_child(sprite)
+	if WalkerSprite.attach(self, sprite_name, 2.2):
+		pass  # bandit-type foes get full directional bodies
+	elif AssetLibrary.texture("characters", sprite_name) != null:
+		var art: Texture2D = AssetLibrary.texture("characters", sprite_name)
+		_beast_sprite = Sprite2D.new()
+		_beast_sprite.texture = art
+		_beast_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_beast_sprite.scale = Vector2(2.4, 2.4)
+		add_child(_beast_sprite)
 	else:
 		var body: ColorRect = ColorRect.new()
 		body.color = Color(0.85, 0.3, 0.25)
@@ -100,6 +103,7 @@ func _physics_process(delta: float) -> void:
 	elif state != FoeState.CHASE:
 		_exclaim.visible = false
 
+	var before: Vector2 = position
 	match state:
 		FoeState.PATROL:
 			var target: Vector2 = waypoints[_waypoint_index % waypoints.size()]
@@ -111,6 +115,8 @@ func _physics_process(delta: float) -> void:
 			position = position.move_toward(_player.position, CHASE_SPEED * delta)
 		FoeState.RETURN:
 			position = position.move_toward(_home, PATROL_SPEED * delta)
+	if _beast_sprite != null and absf(position.x - before.x) > 0.1:
+		_beast_sprite.flip_h = position.x < before.x  # DCSS beasts face right
 
 
 func _on_body_entered(body: Node2D) -> void:

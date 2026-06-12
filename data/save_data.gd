@@ -12,3 +12,4 @@ extends Resource
 @export var merc_hired: bool = false
 @export var inventory: Dictionary = {}  # item ability id -> count
 @export var opened_chests: Array[String] = []
+@export var quests_done: Array[String] = []

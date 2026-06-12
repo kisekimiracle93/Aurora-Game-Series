@@ -143,7 +143,7 @@ func test_wolves_shake_mati_at_battle_start() -> void:
 		[cavene, mati] as Array[BaseCombatant], [wolf] as Array[BaseCombatant], 7
 	)
 	encounter.start()
-	assert_almost_eq(mati.meters.resolve(), 50.0, EPS, "fear of wolves: Resolve -10")
+	assert_almost_eq(mati.meters.resolve(), 45.0, EPS, "fear of wolves: Resolve -15")
 
 
 func test_bandits_steel_bastil_duty() -> void:
@@ -156,7 +156,7 @@ func test_bandits_steel_bastil_duty() -> void:
 	var encounter: CombatEncounter = autofree(CombatEncounter.new())
 	encounter.setup([bastil] as Array[BaseCombatant], [bandit] as Array[BaseCombatant], 7)
 	encounter.start()
-	assert_almost_eq(bastil.meters.duty(), 60.0, EPS, "roads are his to keep: Duty +10")
+	assert_almost_eq(bastil.meters.duty(), 62.0, EPS, "roads are his to keep: Duty +12")
 
 
 # --- overworld foe state machine ------------------------------------------------
@@ -215,3 +215,52 @@ func test_new_enemy_roster_files_load() -> void:
 	for roster: String in ["bandit_ambush", "bandit_pair", "wisp_pack"]:
 		for enemy_path: String in battle_script.enemy_paths_for(roster):
 			assert_true(ResourceLoader.exists(enemy_path), enemy_path)
+
+
+# --- polish pass: walk sets, menu folders, character ledger ----------------------
+
+
+func test_walk_frames_built_for_party_and_bandits() -> void:
+	for member_name: String in ["Bastil", "Cavene", "Jecht", "Mati", "Church Lancer", "Roadside Bandit"]:
+		var frames: SpriteFrames = AssetLibrary.walk_frames(member_name)
+		assert_not_null(frames, member_name)
+		if frames == null:
+			continue
+		for dir_name: String in ["down", "left", "right", "up"]:
+			assert_gt(frames.get_frame_count(dir_name), 0, "%s %s" % [member_name, dir_name])
+			assert_gt(frames.get_frame_count("idle_" + dir_name), 0)
+	assert_null(AssetLibrary.walk_frames("Frozen Shepherd"), "beasts have no walk sets")
+
+
+func test_action_menu_folders_categorize_kits() -> void:
+	var bastil: BaseCombatant = autofree(
+		BaseCombatant.from_character(load("res://data/characters/bastil.tres"))
+	)
+	var menu: ActionMenu = ActionMenu.new()
+	add_child_autofree(menu)
+	menu.open_for(bastil)
+	var magic: Array[AbilityData] = menu._magic_list()
+	var skills: Array[AbilityData] = menu._skill_list()
+	var magic_ids: Array[String] = []
+	for ability: AbilityData in magic:
+		magic_ids.append(ability.id)
+	var skill_ids: Array[String] = []
+	for ability: AbilityData in skills:
+		skill_ids.append(ability.id)
+	assert_has(magic_ids, "rally_by_flame", "supports file under Magic")
+	assert_has(skill_ids, "oathfire_strike", "weapon arts file under Skills")
+	assert_does_not_have(magic_ids, "guard")
+	assert_does_not_have(magic_ids, "pray")
+	assert_does_not_have(magic_ids, "echo_living_pyre", "echoes stay on the root")
+
+
+func test_burden_drag_threshold() -> void:
+	assert_false(MeterMath.is_burden_dragging(49.9))
+	assert_true(MeterMath.is_burden_dragging(50.0))
+
+
+func test_character_menu_overlay_boots() -> void:
+	var overlay: CharacterMenuOverlay = CharacterMenuOverlay.new()
+	add_child_autofree(overlay)
+	await get_tree().process_frame
+	assert_gt(overlay.get_child_count(), 2, "dimmer + title + cards")

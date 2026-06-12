@@ -94,7 +94,7 @@ func _build_common() -> void:
 	dialog_stack.add_child(_choice_box)
 
 	var title: Label = Label.new()
-	title.text = area_name
+	title.text = area_name + "      ·      [C] party"
 	title.add_theme_font_size_override("font_size", 18)
 	title.modulate = Color(0.85, 0.85, 0.9)
 	title.position = Vector2(16, 10)
@@ -269,16 +269,21 @@ func add_roamer(
 	var roamer: Node2D = Node2D.new()
 	roamer.position = waypoints[0]
 	roamer.z_index = 9
-	var art: Texture2D = AssetLibrary.texture("characters", roamer_name)
-	if art == null:
-		art = AssetLibrary.texture("characters", "Cavene")  # generic villager body
-	if art != null:
-		var sprite: Sprite2D = Sprite2D.new()
-		sprite.texture = art
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		sprite.scale = Vector2(2.0, 2.0)
-		sprite.modulate = tint
-		roamer.add_child(sprite)
+	# Directional walker body (tinted villager); static sprite as fallback.
+	var walker_name: String = (
+		roamer_name if AssetLibrary.walk_frames(roamer_name) != null else "Cavene"
+	)
+	if WalkerSprite.attach(roamer, walker_name, 2.0):
+		(roamer.get_child(0) as WalkerSprite).modulate = tint
+	else:
+		var art: Texture2D = AssetLibrary.texture("characters", "Cavene")
+		if art != null:
+			var sprite: Sprite2D = Sprite2D.new()
+			sprite.texture = art
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			sprite.scale = Vector2(2.0, 2.0)
+			sprite.modulate = tint
+			roamer.add_child(sprite)
 	add_child(roamer)
 	# Drift between waypoints forever.
 	var tween: Tween = roamer.create_tween().set_loops()
@@ -320,6 +325,13 @@ func _advance_dialog() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("char_menu") and not _dialog.visible:
+		get_viewport().set_input_as_handled()
+		var sfx_menu: Node = get_node_or_null("/root/SfxManager")
+		if sfx_menu != null:
+			sfx_menu.play("click")
+		add_child(CharacterMenuOverlay.new())
+		return
 	if not event.is_action_pressed("interact"):
 		return
 	get_viewport().set_input_as_handled()

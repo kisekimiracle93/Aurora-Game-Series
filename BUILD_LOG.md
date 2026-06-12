@@ -642,3 +642,49 @@ darkness, clamping), new enemy/roster files.
 
 **Numbers I chose (tunable):** duty/burden deltas above; foe aggro 185 / leash
 360; potion 120 HP / draught 45 AE; starting kit 2/1; burden relief 15/rest.
+
+---
+
+## Deep polish pass (post-expansion playtest feedback)
+
+- **4-direction walk animation**: `tools/crop_walks.gd` cut all 84 frames
+  (7 humans × 4 dirs × 3 frames) from the hero sheet; `AssetLibrary.walk_frames`
+  builds cached SpriteFrames; new `WalkerSprite` (AnimatedSprite2D) watches its
+  parent's motion and plays walk/idle per facing. Player avatar, town roamers,
+  and bandit map-foes all turn properly now; single-tile beasts flip to face
+  their motion. NPC fronts finally exist.
+- **Combat menus are pure keyboard/controller**: WASD merged into ui_up/down/
+  left/right (arrows + D-pad + stick kept); ActionMenu rebuilt as an **FF-style
+  folder menu** — root: Attack / Magic ▸ / Skills ▸ / Items ▸ / Echo / Guard /
+  Pray; folders list contents with a Back entry; B/Esc backs out; focus lands
+  on the first entry of every page; the panel re-anchors per page.
+  Supports (heals/rally) file under Magic, weapon arts under Skills, items
+  show counts and only inside their folder.
+- **FX louder still**: FF-style **summoning glyph** (twin counter-rotating arc
+  rings) under casters, pillar wider + brighter (130/190px), storms 100/160
+  motes, scale up — layered with the existing aura/rings/X-slash/shake stack.
+- **Burden finally bites in play**: at ≥50 every action's CT cost +15% with a
+  "moves heavily" log line; HUD BUR bar burns red at the threshold; reactions
+  buffed (Mati −15 Resolve vs wolves, Bastil +12 Duty vs bandits); quest
+  swings raised (±8–15 range).
+- **Quests truly once-only**: committed the moment the choice sheet opens
+  (no re-roll by re-talking), markers vanish, and `quests_done` now persists
+  through saves.
+- **Landscape pass on the Crystal Fields**: contiguous cliff rampart sealing
+  the whole north edge, southern low-cliff ridge, real forest WALLS (west wood
+  + mid grove + eastern skirt), a worn pilgrim trail from gate to gate with
+  fence posts, ground mottling (soft light/dark patches kill the flat snow),
+  rock/icicle clusters near landmarks. Brighter snow base.
+- **Character menu** (`CharacterMenuOverlay`, C / gamepad Y in any area): a
+  stone card per member — portrait, class/element, all ten stats, and every
+  meter with band + plain-words effect text (Burden card turns red and warns
+  of the Echo lock). Merc card appears only while hired.
+- Battle foes render 1.3× with wider rank spacing (fully visible bodies).
+
+**Test status:** `161/161 passed (1204 asserts)`; boots clean. New coverage:
+walk-frame sets for all seven humans (and null for beasts), menu folder
+categorization (supports→Magic, arts→Skills, echo stays root), burden drag
+threshold, character menu overlay boot, updated reaction values.
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal (per the
+human: "wait for the memory at the dungeon").

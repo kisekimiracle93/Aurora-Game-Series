@@ -68,3 +68,35 @@ static func to_file_name(display_name: String) -> String:
 	while parts.size() > 1 and parts[parts.size() - 1].is_valid_int():
 		parts.remove_at(parts.size() - 1)
 	return "_".join(parts).replace("'", "").replace("-", "_")
+
+
+static var _walk_cache: Dictionary = {}
+
+
+## 4-direction walk animations (down/left/right/up + idle_*) built from
+## assets/sprites/walk/<name>_<dir>_<frame>.png. Null when a set is absent.
+static func walk_frames(display_name: String) -> SpriteFrames:
+	var key: String = to_file_name(display_name)
+	if _walk_cache.has(key):
+		return _walk_cache[key]
+	var first: String = "res://assets/sprites/walk/%s_down_0.png" % key
+	if not ResourceLoader.exists(first):
+		_walk_cache[key] = null
+		return null
+	var frames: SpriteFrames = SpriteFrames.new()
+	for dir_name: String in ["down", "left", "right", "up"]:
+		frames.add_animation(dir_name)
+		frames.set_animation_speed(dir_name, 7.0)
+		frames.set_animation_loop(dir_name, true)
+		for frame_index: int in [0, 1, 2, 1]:
+			var path: String = (
+				"res://assets/sprites/walk/%s_%s_%d.png" % [key, dir_name, frame_index]
+			)
+			if ResourceLoader.exists(path):
+				frames.add_frame(dir_name, load(path))
+		frames.add_animation("idle_" + dir_name)
+		var idle_path: String = "res://assets/sprites/walk/%s_%s_1.png" % [key, dir_name]
+		if ResourceLoader.exists(idle_path):
+			frames.add_frame("idle_" + dir_name, load(idle_path))
+	_walk_cache[key] = frames
+	return frames

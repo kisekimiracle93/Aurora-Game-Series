@@ -1,17 +1,25 @@
 class_name ActionMenu
 extends PanelContainer
-## The current actor's command menu. Emits the chosen AbilityData; the battle
-## scene handles targeting. Unaffordable abilities are greyed out.
+## FF-style command menu: a compact root (Attack / Magic / Skills / Items /
+## Echo / Guard / Pray) where Magic, Skills, and Items open as sub-folders
+## with a Back entry. Fully keyboard/controller drivable (focus + ui_up/down,
+## which also answer to WASD). Unaffordable entries grey out.
 
 signal ability_chosen(ability: AbilityData)
 signal button_hovered
+signal page_changed  # folders open/close: the scene re-anchors the panel
+
+var _on_root: bool = true
+
+const ITEM_IDS: Array[String] = ["item_hp_potion", "item_aether_draught"]
 
 var _box: VBoxContainer
 var _title: Label
+var _actor: BaseCombatant
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(220, 0)
+	custom_minimum_size = Vector2(230, 0)
 	_box = VBoxContainer.new()
 	add_child(_box)
 	_title = Label.new()
@@ -21,70 +29,172 @@ func _ready() -> void:
 
 
 func open_for(actor: BaseCombatant) -> void:
-	for child: Node in _box.get_children():
-		if child != _title:
-			child.queue_free()
-	_title.text = "%s — choose action" % actor.display_name
-
-	var attack: AbilityData = actor.abilities.find_by_id("attack_basic")
-	if attack != null:
-		_add_button(actor, attack)
-	for skill: AbilityData in actor.abilities.get_skills():
-		if skill.id != "guard" and skill.id != "pray":
-			_add_button(actor, skill)
-	for echo: AbilityData in actor.abilities.get_echoes():
-		_add_button(actor, echo, not actor.meters.echo_ready())
-	# Consumables (world runs only — stock lives in WorldState).
-	var world: Node = get_node_or_null("/root/WorldState")
-	if world != null and world.in_world_run:
-		for item_id: String in ["item_hp_potion", "item_aether_draught"]:
-			var count: int = world.item_count(item_id)
-			if count <= 0:
-				continue
-			var item: AbilityData = AbilityLibrary.load_ability(item_id)
-			if item == null:
-				continue
-			var button: Button = Button.new()
-			button.text = "%s  ×%d" % [item.display_name, count]
-			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			button.pressed.connect(func() -> void: ability_chosen.emit(item))
-			button.mouse_entered.connect(func() -> void: button_hovered.emit())
-			button.focus_entered.connect(func() -> void: button_hovered.emit())
-			_box.add_child(button)
-	var guard: AbilityData = actor.abilities.find_by_id("guard")
-	if guard != null:
-		_add_button(actor, guard)
-	var pray: AbilityData = actor.abilities.find_by_id("pray")
-	if pray != null:
-		_add_button(actor, pray)
-
+	_actor = actor
+	_show_root()
 	visible = true
-	var first_button: Button = _first_button()
-	if first_button != null:
-		first_button.grab_focus()
 
 
 func close() -> void:
 	visible = false
 
 
-func _add_button(actor: BaseCombatant, ability: AbilityData, force_disabled: bool = false) -> void:
+func _unhandled_input(event: InputEvent) -> void:
+	if visible and not _on_root and event.is_action_pressed("ui_cancel"):
+		_show_root()
+		get_viewport().set_input_as_handled()
+
+
+## --- menu pages ----------------------------------------------------------------
+
+
+func _show_root() -> void:
+	_on_root = true
+	_clear()
+	_title.text = "%s — choose action" % _actor.display_name
+
+	var attack: AbilityData = _actor.abilities.find_by_id("attack_basic")
+	if attack != null:
+		_ability_button(attack)
+	if not _magic_list().is_empty():
+		_folder_button("Magic  ▸", _show_magic)
+	if not _skill_list().is_empty():
+		_folder_button("Skills  ▸", _show_skills)
+	if _has_items():
+		_folder_button("Items  ▸", _show_items)
+	for echo: AbilityData in _actor.abilities.get_echoes():
+		var locked: bool = (
+			not _actor.meters.echo_ready()
+			or MeterMath.is_echo_locked_by_burden(_actor.burden_for_math())
+		)
+		_ability_button(echo, locked)
+	var guard: AbilityData = _actor.abilities.find_by_id("guard")
+	if guard != null:
+		_ability_button(guard)
+	var pray: AbilityData = _actor.abilities.find_by_id("pray")
+	if pray != null:
+		_ability_button(pray)
+	_focus_first()
+	page_changed.emit()
+
+
+func _show_magic() -> void:
+	_on_root = false
+	_clear()
+	_title.text = "%s — magic" % _actor.display_name
+	for spell: AbilityData in _magic_list():
+		_ability_button(spell)
+	_back_button()
+	_focus_first()
+	page_changed.emit()
+
+
+func _show_skills() -> void:
+	_on_root = false
+	_clear()
+	_title.text = "%s — skills" % _actor.display_name
+	for skill: AbilityData in _skill_list():
+		_ability_button(skill)
+	_back_button()
+	_focus_first()
+	page_changed.emit()
+
+
+func _show_items() -> void:
+	_on_root = false
+	_clear()
+	_title.text = "%s — items" % _actor.display_name
+	var world: Node = get_node_or_null("/root/WorldState")
+	for item_id: String in ITEM_IDS:
+		var count: int = world.item_count(item_id) if world != null else 0
+		if count <= 0:
+			continue
+		var item: AbilityData = AbilityLibrary.load_ability(item_id)
+		if item == null:
+			continue
+		var button: Button = _make_button("%s  ×%d" % [item.display_name, count])
+		button.pressed.connect(func() -> void: ability_chosen.emit(item))
+	_back_button()
+	_focus_first()
+	page_changed.emit()
+
+
+## --- categorization --------------------------------------------------------------
+
+
+## Spells and battle-supports (heals, rallies) live under Magic, FF-style.
+func _magic_list() -> Array[AbilityData]:
+	var result: Array[AbilityData] = []
+	for ability: AbilityData in _actor.abilities.get_all():
+		if ability.is_item or ability.id in ["guard", "pray"]:
+			continue
+		if ability.ability_type == "spell" or ability.ability_type == "support":
+			result.append(ability)
+	return result
+
+
+## Weapon arts: physical techniques beyond the basic swing.
+func _skill_list() -> Array[AbilityData]:
+	var result: Array[AbilityData] = []
+	for ability: AbilityData in _actor.abilities.get_all():
+		if ability.ability_type == "attack" and ability.id != "attack_basic":
+			result.append(ability)
+	return result
+
+
+func _has_items() -> bool:
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world == null or not world.in_world_run:
+		return false
+	for item_id: String in ITEM_IDS:
+		if world.item_count(item_id) > 0:
+			return true
+	return false
+
+
+## --- widgets ----------------------------------------------------------------------
+
+
+func _clear() -> void:
+	for child: Node in _box.get_children():
+		if child != _title:
+			child.queue_free()
+
+
+func _make_button(text: String) -> Button:
 	var button: Button = Button.new()
-	var cost_tag: String = "  (%d AE)" % ability.aether_cost if ability.aether_cost > 0 else ""
-	button.text = ability.display_name + cost_tag
+	button.text = text
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.disabled = force_disabled or not actor.stats.can_spend_aether(ability.aether_cost)
-	if actor.status.is_spell_blocked() and ability.ability_type == "spell":
-		button.disabled = true
-		button.text += "  [Silenced]"
-	button.pressed.connect(func() -> void: ability_chosen.emit(ability))
 	button.mouse_entered.connect(func() -> void: button_hovered.emit())
 	button.focus_entered.connect(func() -> void: button_hovered.emit())
 	_box.add_child(button)
+	return button
 
 
-func _first_button() -> Button:
+func _ability_button(ability: AbilityData, force_disabled: bool = false) -> void:
+	var cost_tag: String = "  (%d AE)" % ability.aether_cost if ability.aether_cost > 0 else ""
+	var button: Button = _make_button(ability.display_name + cost_tag)
+	button.disabled = force_disabled or not _actor.stats.can_spend_aether(ability.aether_cost)
+	if _actor.status.is_spell_blocked() and ability.ability_type == "spell":
+		button.disabled = true
+		button.text += "  [Silenced]"
+	button.pressed.connect(func() -> void: ability_chosen.emit(ability))
+
+
+func _folder_button(text: String, opener: Callable) -> void:
+	var button: Button = _make_button(text)
+	button.pressed.connect(func() -> void:
+		button_hovered.emit()  # audible page-turn
+		opener.call())
+
+
+func _back_button() -> void:
+	var button: Button = _make_button("<  Back")
+	button.pressed.connect(_show_root)
+
+
+func _focus_first() -> void:
+	await get_tree().process_frame  # let queued frees settle before focusing
 	for child: Node in _box.get_children():
 		if child is Button and not (child as Button).disabled:
-			return child as Button
-	return null
+			(child as Button).grab_focus()
+			return

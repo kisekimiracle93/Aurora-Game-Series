@@ -203,7 +203,7 @@ const PARTY_SLOTS: Array[Vector2] = [
 	Vector2(285, 405), Vector2(330, 480),
 ]
 const ENEMY_SLOTS: Array[Vector2] = [
-	Vector2(930, 170), Vector2(990, 310), Vector2(930, 450),
+	Vector2(920, 160), Vector2(1010, 320), Vector2(920, 480),
 ]
 
 
@@ -243,7 +243,7 @@ func _spawn_enemies() -> void:
 		enemy.position = ENEMY_SLOTS[i % ENEMY_SLOTS.size()]
 		stage.add_child(enemy)
 		enemies.append(enemy)
-		_add_token(enemy, ENEMY_COLOR)
+		_add_token(enemy, ENEMY_COLOR, 1.3)  # foes read bigger on the field
 
 
 func _spawn_boss() -> void:
@@ -334,6 +334,8 @@ func _build_ui() -> void:
 	action_menu.position = Vector2(16, 300)
 	add_child(action_menu)
 	action_menu.ability_chosen.connect(_on_ability_chosen)
+	action_menu.page_changed.connect(func() -> void:
+		_place_menu_above_hud.call_deferred(action_menu))
 
 	target_select = TargetSelect.new()
 	target_select.position = Vector2(16, 300)

@@ -86,6 +86,7 @@ func continue_run(tree: SceneTree) -> bool:
 	merc_hired = save.merc_hired
 	inventory = save.inventory.duplicate() if not save.inventory.is_empty() else inventory
 	opened_chests = save.opened_chests.duplicate()
+	quests_done = save.quests_done.duplicate()
 	for member_name: String in party_meters:
 		if save.character_resolve.has(member_name):
 			party_meters[member_name]["resolve"] = float(save.character_resolve[member_name])
@@ -199,6 +200,9 @@ func rest_and_save(scene_path: String) -> Error:
 	save.opened_chests = []
 	for chest_id: Variant in opened_chests:
 		save.opened_chests.append(String(chest_id))
+	save.quests_done = []
+	for quest_id: Variant in quests_done:
+		save.quests_done.append(String(quest_id))
 	return SaveSystem.write(save)
 
 
