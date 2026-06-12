@@ -910,3 +910,66 @@ layer < UI layer, minimap bookkeeping + firefly night wiring, menu
 page flow (front page → party/map/guide and back).
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal.
+
+---
+
+## Cinematic pass (owner-directed): the camera learns to act
+
+NEW DEV CAPABILITY this pass: the agent can now SEE the game — a
+screenshot harness (tools/screenshot.gd + xvfb + software GL) renders real
+frames headlessly. Every change below was verified against actual renders,
+which caught three bugs no test would have: the road texture banding into
+stripes, the market lane drawn ON the river, and TextureRect's minimum-size
+clamp blowing 10px river banks into 128px rock columns (EXPAND_IGNORE_SIZE
+now set on every tiled rect).
+
+- **Hero stills re-cropped to face the camera** (the static portraits were
+  the sheet's BACK row — row order strikes again). Character menu, minimap
+  facecard, quest NPCs, and the new turn bar all show faces now.
+- **Town v4 (3840×2400, twice as big again)**: ringed by deep woods (the
+  east road is the only break), castle flanked by thickets (that's WHY you
+  can't walk around it), and a **winding river** that angles NW→S in broad
+  steps under three cobbled bridges — wide water, thin stone, current
+  glints, joint splashes, two patient fishermen and a stone-skipping kid
+  whose stones actually splash. **Seamless synthesized cobblestone**
+  (cobble_fill.png, brick-offset stones) replaced the banding sheet strips
+  on avenue/plaza/lane/bridges. A working farm (tilled plots, fence, hens,
+  Bess the immovable cow), gate guards with lines, longer waypost gates
+  with pennants and lanterns (260-300px spans).
+- **Combat direction**: presenter now knows the targets — hold on the
+  caster while the cast reads, then a slow-mo GLIDE to the victim
+  (0.45s at 55% time), impact + camera punch ON the victim, long hold for
+  numbers and sound, then release. Footsteps kick biome puffs.
+- **Free-look camera in battle**: arrows/stick/WASD drift the frame a few
+  inches any direction (FREE_LOOK_REACH 170×110) — see the sky, see the
+  ground — and it glides home automatically whenever an action is chosen.
+  UI rides CanvasLayers, so it stays glued to the screen while the world
+  moves underneath. **[Z] lens**: snaps tight fast, relaxes over ~6s — in
+  battle AND in the world.
+- **Battle FX at 1000%** (`BattleWeather`, layer 60): sky-sized light
+  shafts sweeping the arena, screen-wide falling snow/leaves/dust per
+  biome, and edge DRIFTS that pile up at the screen's corners over ~42s —
+  then the cameraman gives the rig a gentle wiggle and the buildup tumbles
+  off (48s cycle). World FX bumped ~200%: 7 god rays (stronger), 7 clouds,
+  fireflies ×2, dust motes ×2.
+- **Turn meter, FF-style**: a soft blue white-bordered panel running
+  horizontally across the top — face chips with side-colored underlines,
+  the current actor gold and larger. Floating combat names REMOVED (the
+  bar, HUD, and banner carry identity). Log moved below the bar.
+- **Cavern arena floor fixed**: full hewn-stone platform (cool tint) with
+  additive light pools under both ranks — no more lost-in-the-dark strip.
+  Tundra horizon rebuilt with smaller bluffs + a haze band.
+- **4K / fullscreen**: canvas_items stretch (keep aspect) — the game now
+  fills any screen; window opens maximized; **F11** toggles true
+  fullscreen. **HDR 2D + glow** on bright lights, saturation 1.14,
+  contrast 1.04 (the shimmer knob; Mobile renderer).
+- Character menu cards restyled: portrait+name header, two-column stat
+  grid, slim color meter bars, and the PartyMood line per member.
+- Map foes: grounding shadows under every patroller.
+
+**Test status:** `191/191 passed (1473 asserts)`; boots clean; renders
+verified by eye (plaza, river, bridges, night, tundra battle). New
+coverage: lens_zoom action, BattleWeather palettes per biome, free-look
+reach bounds, town v4 size/torches.
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal.

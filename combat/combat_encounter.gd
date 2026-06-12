@@ -123,10 +123,10 @@ func execute_action_presented(
 	actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant]
 ) -> void:
 	if presenter != null:
-		await presenter.present_windup(actor, ability)
+		await presenter.present_windup(actor, ability, targets)
 	_execute(actor, ability, targets)
 	if presenter != null:
-		await presenter.present_followthrough(actor, ability)
+		await presenter.present_followthrough(actor, ability, targets)
 
 
 func log_line(text: String) -> void:

@@ -8,7 +8,45 @@ func _init() -> void:
 	_crop_bandits()
 	_crop_town()
 	_crop_snow()
+	_synth_cobble()
 	quit(0)
+
+
+## The sheet's cobble strips band badly when tiled (baked edge shadows), so
+## the road FILL is synthesized: brick-offset rounded stones, seamless both
+## ways, warm sandstone with per-stone jitter. 64x64.
+func _synth_cobble() -> void:
+	var size: int = 64
+	var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mortar: Color = Color(0.475, 0.40, 0.305)
+	img.fill(mortar)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7
+	var rows: int = 4
+	var row_h: int = size / rows
+	for row: int in range(rows):
+		var offset: int = (size / 4) if row % 2 == 1 else 0
+		var x: int = 0
+		while x < size:
+			var stone_w: int = rng.randi_range(12, 19)
+			var jitter: float = rng.randf_range(-0.07, 0.07)
+			var stone: Color = Color(
+				0.76 + jitter, 0.66 + jitter * 0.9, 0.50 + jitter * 0.7
+			)
+			var highlight: Color = stone.lightened(0.12)
+			for py: int in range(row * row_h + 1, (row + 1) * row_h - 1):
+				for px: int in range(x + 1, x + stone_w - 1):
+					var fx: int = (px + offset) % size
+					var fy: int = py % size
+					# Rounded corners: skip the very corner pixels.
+					var edge_x: bool = px == x + 1 or px == x + stone_w - 2
+					var edge_y: bool = py == row * row_h + 1 or py == (row + 1) * row_h - 2
+					if edge_x and edge_y:
+						continue
+					img.set_pixel(fx, fy, highlight if py == row * row_h + 1 else stone)
+			x += stone_w
+	img.save_png("res://assets/sprites/props/cobble_fill.png")
+	print("saved synthesized cobble_fill 64x64")
 
 
 func _key_out(img: Image, corner: Vector2i = Vector2i.ZERO) -> void:
@@ -45,7 +83,8 @@ func _crop_bandits() -> void:
 	}
 	for pick_name: String in picks:
 		var block: Vector2i = picks[pick_name]
-		var rect: Rect2i = Rect2i(block.x * 3 * fw + fw, block.y * 4 * fh, fw, fh)
+		# Down-facing row is index 2 (sheet rows run up/right/down/left).
+		var rect: Rect2i = Rect2i(block.x * 3 * fw + fw, (block.y * 4 + 2) * fh, fw, fh)
 		var crop: Image = src.get_region(rect)
 		_key_out(crop)
 		crop.save_png("res://assets/sprites/characters/%s.png" % pick_name)

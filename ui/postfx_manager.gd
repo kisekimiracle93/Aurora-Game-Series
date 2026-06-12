@@ -22,6 +22,32 @@ func _ready() -> void:
 	_material.shader = load("res://ui/shaders/postfx.gdshader")
 	_rect.material = _material
 	add_child(_rect)
+	# HDR 2D color: glow on the bright lights, a touch more saturation and
+	# contrast — the "shimmering palette" knob (no-op on renderers without it).
+	var environment: Environment = Environment.new()
+	environment.background_mode = Environment.BG_CANVAS
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.55
+	environment.glow_bloom = 0.06
+	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	environment.glow_hdr_threshold = 1.08
+	environment.adjustment_enabled = true
+	environment.adjustment_saturation = 1.14
+	environment.adjustment_contrast = 1.04
+	var world_environment: WorldEnvironment = WorldEnvironment.new()
+	world_environment.environment = environment
+	add_child(world_environment)
+
+
+## F11: real fullscreen, on any screen size (the canvas scales to fit).
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and (event as InputEventKey).physical_keycode == KEY_F11:
+		var mode: DisplayServer.WindowMode = DisplayServer.window_get_mode()
+		DisplayServer.window_set_mode(
+			DisplayServer.WINDOW_MODE_WINDOWED
+			if mode == DisplayServer.WINDOW_MODE_FULLSCREEN
+			else DisplayServer.WINDOW_MODE_FULLSCREEN
+		)
 
 
 func set_param(param: String, value: float) -> void:

@@ -74,14 +74,7 @@ func setup(
 	add_child(_body)
 	_flash_target = sprite if sprite != null else (_body as CanvasItem)
 
-	var name_label: Label = Label.new()
-	name_label.text = combatant.display_name
-	name_label.add_theme_font_size_override("font_size", 13)
-	name_label.position = Vector2(-BODY_SIZE.x, -BODY_SIZE.y / 2.0 - 24.0)
-	name_label.size = Vector2(BODY_SIZE.x * 2.0, 18.0)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(name_label)
-
+	# (No floating name — the turn bar, HUD, and banner carry identity now.)
 	var hp_bg: ColorRect = ColorRect.new()
 	hp_bg.color = Color(0.15, 0.15, 0.15)
 	hp_bg.size = Vector2(BODY_SIZE.x + 4.0, 6.0)

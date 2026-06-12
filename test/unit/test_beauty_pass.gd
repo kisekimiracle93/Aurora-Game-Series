@@ -193,7 +193,17 @@ func test_trash_hp_cut_but_within_plan_ranges() -> void:
 func test_new_input_actions_registered() -> void:
 	assert_true(InputMap.has_action("run_toggle"), "G sprint")
 	assert_true(InputMap.has_action("lantern"), "T lantern")
+	assert_true(InputMap.has_action("lens_zoom"), "Z tight lens")
 	assert_lt(PlayerAvatar.WALK_SPEED, PlayerAvatar.RUN_SPEED)
+
+
+func test_battle_weather_palettes_cover_every_biome() -> void:
+	for biome_name: String in ["meadow", "forest", "tundra", "cavern"]:
+		var look: Dictionary = BattleWeather.palette(biome_name)
+		assert_true(look.has("fall") and look.has("pile") and look.has("ray"), biome_name)
+		assert_gt(int(look["amount"]), 0, biome_name + " weather falls")
+	assert_gt(BattleCamera.FREE_LOOK_REACH.x, 100.0, "a real few inches of freedom")
+	assert_lt(BattleCamera.FREE_LOOK_REACH.x, 400.0, "freedom, not a map scroll")
 
 
 func test_lens_sits_below_the_ui() -> void:

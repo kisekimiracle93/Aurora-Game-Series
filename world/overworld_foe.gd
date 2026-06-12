@@ -76,6 +76,14 @@ func _ready() -> void:
 		body.size = Vector2(30, 30)
 		body.position = Vector2(-15, -15)
 		add_child(body)
+	# Grounding shadow: foes stand ON the land, not floating over it.
+	var shadow: Node2D = Node2D.new()
+	shadow.position = Vector2(0, 24)
+	shadow.show_behind_parent = true
+	shadow.draw.connect(func() -> void:
+		shadow.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.34))
+		shadow.draw_circle(Vector2.ZERO, 19.0, Color(0, 0, 0, 0.34)))
+	add_child(shadow)
 	_exclaim = Label.new()
 	_exclaim.text = "!"
 	_exclaim.add_theme_font_size_override("font_size", 26)

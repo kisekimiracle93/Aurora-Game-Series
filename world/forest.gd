@@ -38,7 +38,7 @@ func _setup_area() -> void:
 	], 13)
 
 	# West: home to Aethertown. East: two routes into the Crystal Fields.
-	add_exit(Rect2(0, 880, 40, 220), "res://world/town.tscn", Vector2(2440, 660))
+	add_exit(Rect2(0, 880, 40, 220), "res://world/town.tscn", Vector2(3700, 1150))
 	add_exit(Rect2(3160, 600, 40, 200), "res://world/outside.tscn", Vector2(110, 700))
 	add_exit(Rect2(3160, 1320, 40, 200), "res://world/outside.tscn", Vector2(110, 1200))
 	var west: Label = Label.new()

@@ -23,8 +23,11 @@ func _init() -> void:
 	}
 	for pick_name: String in picks:
 		var block: Vector2i = picks[pick_name]
-		# Front-facing idle: middle frame of the block's first (down-facing) row.
-		var rect: Rect2i = Rect2i(block.x * 3 * frame_w + frame_w, block.y * 4 * frame_h, frame_w, frame_h)
+		# Front-facing idle: middle frame of the block's DOWN row (sheet rows
+		# run up/right/down/left, so down is row index 2).
+		var rect: Rect2i = Rect2i(
+			block.x * 3 * frame_w + frame_w, (block.y * 4 + 2) * frame_h, frame_w, frame_h
+		)
 		var crop: Image = src.get_region(rect)
 		_key_out_background(crop)
 		crop.save_png("res://assets/sprites/characters/%s.png" % pick_name)

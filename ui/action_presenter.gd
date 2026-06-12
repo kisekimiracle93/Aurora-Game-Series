@@ -13,15 +13,18 @@ const STEP_DISTANCE: float = 52.0
 const BRACE_DISTANCE: float = 26.0
 const ECHO_TIME_SCALE: float = 0.55
 
-## seconds: [windup_hold, follow_hold]
+## seconds: [windup_hold, follow_hold] — windup lingers on the caster so the
+## cast FX read; followthrough lingers on the victim so the hit reads.
 const PACING: Dictionary = {
-	"basic": [0.7, 0.85],
-	"skill": [1.05, 1.2],
-	"spell": [1.3, 1.4],
-	"support": [0.9, 0.85],
-	"echo": [2.1, 2.6],
+	"basic": [0.8, 1.0],
+	"skill": [1.15, 1.35],
+	"spell": [1.5, 1.6],
+	"support": [0.95, 0.9],
+	"echo": [2.3, 2.8],
 	"brace": [0.5, 0.55],
 }
+## The glide from caster to victim (real seconds, world slowed underneath).
+const PAN_SECONDS: float = 0.45
 
 var stage: Node2D  # the world layer that shakes
 var overlay_parent: Node  # full-screen flash/X layer (UI level)
@@ -35,6 +38,10 @@ const HIT_STOP_HEAVY: float = 0.12
 const HIT_STOP_ECHO: float = 0.25
 ## Headless runs (tests, CI boots) skip all waits — logic stays synchronous.
 var instant: bool = DisplayServer.get_name() == "headless"
+
+## Battle scene installs a biome footstep: puffs of snow/dust/leaves (or a
+## splash) at a position whenever someone strides. Optional.
+var stride_fx: Callable = Callable()
 
 var _flash: ColorRect
 
@@ -67,7 +74,9 @@ func _pace(ability: AbilityData) -> Array:
 	return PACING["skill"]
 
 
-func present_windup(actor: BaseCombatant, ability: AbilityData) -> void:
+func present_windup(
+	actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant] = []
+) -> void:
 	if instant:
 		return
 	var pace: Array = _pace(ability)
@@ -83,6 +92,7 @@ func present_windup(actor: BaseCombatant, ability: AbilityData) -> void:
 	var step: Tween = create_tween()
 	step.tween_property(actor, "position", actor.position + offset, 0.28)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_stride_puff(actor.position)
 
 	if camera != null and not braces:
 		camera.focus_on(actor.position, ability.ability_type == "echo")
@@ -100,17 +110,45 @@ func present_windup(actor: BaseCombatant, ability: AbilityData) -> void:
 			stage, actor.position, "Dark" if ability.darkness_cost > 0 else ability.element
 		)
 
+	# Hold on the caster: let the gathering light and the windup READ.
 	await get_tree().create_timer(float(pace[0]), true, false, true).timeout
 
+	# Then the cinematic turn: glide to whoever is about to receive this,
+	# world slowed a breath underneath, so the impact lands on camera.
+	var aim: Vector2 = _target_focus(actor, targets)
+	if camera != null and not braces and aim != actor.position:
+		var previous_scale: float = Engine.time_scale
+		if previous_scale > 0.9:
+			Engine.time_scale = 0.55
+		camera.pan_to(aim, PAN_SECONDS)
+		await get_tree().create_timer(PAN_SECONDS, true, false, true).timeout
+		Engine.time_scale = previous_scale if previous_scale < 0.9 else 1.0
 
-func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
+
+## Where the camera should look when the deed lands: the victim (or the
+## centroid of an AOE), the ally being helped — or nobody but the actor.
+func _target_focus(actor: BaseCombatant, targets: Array[BaseCombatant]) -> Vector2:
+	var aim: Vector2 = Vector2.ZERO
+	var counted: int = 0
+	for target: BaseCombatant in targets:
+		if target == actor or not is_instance_valid(target):
+			continue
+		aim += target.position
+		counted += 1
+	return aim / float(counted) if counted > 0 else actor.position
+
+
+func present_followthrough(
+	actor: BaseCombatant, ability: AbilityData, targets: Array[BaseCombatant] = []
+) -> void:
 	if instant:
 		return
 	var pace: Array = _pace(ability)
 	var braces: bool = ability.id == "guard" or ability.id == "pray"
+	var aim: Vector2 = _target_focus(actor, targets)
 
-	# Weight of impact: hit-stop freezes the world, the camera punches in,
-	# the screen flashes — heavier deeds, heavier weight.
+	# Weight of impact: hit-stop freezes the world, the camera punches into
+	# the VICTIM, the screen flashes — heavier deeds, heavier weight.
 	if not braces and ability.damage_type != "none":
 		var heavy: bool = ability.coeff >= 2.2 or ability.ability_type == "echo"
 		await _hit_stop(
@@ -118,7 +156,7 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 			else (HIT_STOP_HEAVY if heavy else HIT_STOP_LIGHT)
 		)
 		if camera != null:
-			camera.punch(actor.position)
+			camera.punch(aim)
 			camera.shake(16.0 if heavy else 8.0)
 		else:
 			shake_stage(14.0 if heavy else 7.0)
@@ -129,6 +167,7 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 	if ability.ability_type == "echo":
 		Engine.time_scale = 1.0
 
+	# Hold on the victim: numbers, sparks, and the sound all get their beat.
 	await get_tree().create_timer(float(pace[1]), true, false, true).timeout
 
 	# Return to rank.
@@ -141,9 +180,16 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 		var back: Tween = create_tween()
 		back.tween_property(actor, "position", actor.position - offset, 0.24)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		_stride_puff(actor.position)
 	if camera != null:
 		camera.release()
 	banner.dismiss()
+
+
+## Feet kicking up the arena: the battle scene supplies the biome's material.
+func _stride_puff(pos: Vector2) -> void:
+	if stride_fx.is_valid():
+		stride_fx.call(pos + Vector2(0, 30))
 
 
 ## The world holds its breath at the moment of impact.

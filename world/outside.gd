@@ -157,6 +157,7 @@ func _build_river_and_falls() -> void:
 		river = TextureRect.new()
 		river.texture = water
 		river.stretch_mode = TextureRect.STRETCH_TILE
+		river.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		river.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	else:
 		river = null

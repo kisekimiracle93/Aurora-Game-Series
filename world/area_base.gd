@@ -20,6 +20,8 @@ var music_track: String = ""
 var ambience_profile: String = ""
 ## Maps larger than the screen get a follow camera clamped to these bounds.
 var map_size: Vector2 = Vector2(1280, 720)
+## Where a fresh visit drops the player when no return position is queued.
+var default_spawn: Vector2 = Vector2.INF
 ## Interiors opt out so popping into a house doesn't smudge the travel trail.
 var tracks_on_map: bool = true
 
@@ -135,7 +137,7 @@ func _apply_night_decor(night: bool) -> void:
 	for ray: Polygon2D in _rays:
 		if is_instance_valid(ray):
 			ray.color = (
-				Color(0.72, 0.80, 1.0, 0.050) if night else Color(1.0, 0.95, 0.72, 0.075)
+				Color(0.72, 0.80, 1.0, 0.085) if night else Color(1.0, 0.95, 0.72, 0.115)
 			)
 	if _clouds != null:
 		_clouds.modulate.a = 1.35 if night else 1.0
@@ -211,7 +213,7 @@ func _spawn_position() -> Vector2:
 	if world != null and world.has_return_position:
 		world.has_return_position = false
 		return world.return_position
-	return SCREEN / 2.0
+	return default_spawn if default_spawn != Vector2.INF else SCREEN / 2.0
 
 
 ## --- building blocks for scenes ----------------------------------------------
@@ -394,39 +396,55 @@ func add_torch(pos: Vector2) -> void:
 	torch.add_child(light)
 
 
-## A wooden waypost gate framing the road (cosmetic, walk straight through).
-func add_road_gate(center: Vector2, width: float = 150.0) -> void:
+## A long wooden waypost gate spanning the road (cosmetic, walk straight
+## through): pillars at the ends and middles, a full crossbeam, hanging
+## pennants, and a lantern glow at each post after dark.
+func add_road_gate(center: Vector2, width: float = 260.0) -> void:
 	var art: Texture2D = AssetLibrary.texture("props", "posts")
-	for side: float in [-1.0, 1.0]:
-		var x: float = center.x + side * width / 2.0
+	var pillar_count: int = maxi(2, int(width / 130.0) + 1)
+	for i: int in range(pillar_count):
+		var x: float = center.x - width / 2.0 + width * float(i) / float(pillar_count - 1)
 		if art != null:
-			add_prop("posts", Vector2(x, center.y), 1.8, false)
+			add_prop("posts", Vector2(x, center.y), 2.1, false)
 		else:
-			add_rect(Rect2(x - 5, center.y - 40, 10, 80), Color(0.4, 0.3, 0.2), SORT_Z)
+			add_rect(Rect2(x - 6, center.y - 48, 12, 96), Color(0.4, 0.3, 0.2), SORT_Z)
 	var beam: Node2D = Node2D.new()
-	beam.position = center + Vector2(0, 36)
+	beam.position = center + Vector2(0, 40)
 	beam.z_index = SORT_Z
 	beam.draw.connect(func() -> void:
-		beam.draw_rect(Rect2(-width / 2.0 - 10.0, -98.0, width + 20.0, 9.0), Color(0.33, 0.24, 0.15))
-		beam.draw_rect(Rect2(-width / 2.0 - 10.0, -90.0, width + 20.0, 3.0), Color(0.22, 0.16, 0.10)))
+		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -116.0, width + 28.0, 11.0), Color(0.36, 0.26, 0.16))
+		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -106.0, width + 28.0, 4.0), Color(0.22, 0.16, 0.10))
+		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		rng.seed = int(absf(center.x + center.y))
+		var pennant: int = int(width / 64.0)
+		for i: int in range(pennant):
+			var x: float = -width / 2.0 + 24.0 + (width - 48.0) * float(i) / maxf(float(pennant - 1), 1.0)
+			beam.draw_colored_polygon(PackedVector2Array([
+				Vector2(x - 7, -105), Vector2(x + 7, -105), Vector2(x, -86),
+			]), Color(0.62, 0.12, 0.14) if rng.randf() < 0.6 else Color(0.85, 0.78, 0.6)))
 	add_child(beam)
+	for side: float in [-1.0, 1.0]:
+		add_point_light(
+			center + Vector2(side * width / 2.0, -52.0), Color(1.0, 0.75, 0.4), 0.9, 0.55
+		)
 
 
 ## A tiled sandstone-cobble road strip (falls back to a flat color band).
-func add_cobble_road(rect: Rect2, vertical: bool = false) -> void:
-	var art: Texture2D = AssetLibrary.texture("props", "cobble_v" if vertical else "cobble_h")
+func add_cobble_road(rect: Rect2, _vertical: bool = false) -> void:
+	var art: Texture2D = AssetLibrary.texture("props", "cobble_fill")
 	if art == null:
 		add_rect(rect, Color(0.52, 0.44, 0.32, 0.9), -8)
 		return
 	var road: TextureRect = TextureRect.new()
 	road.texture = art
 	road.stretch_mode = TextureRect.STRETCH_TILE
+	road.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	road.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	road.position = rect.position
 	road.size = rect.size / 2.0
 	road.scale = Vector2(2.0, 2.0)
 	road.z_index = -8
-	road.modulate = Color(0.96, 0.93, 0.88)
+	road.modulate = Color(1.0, 0.97, 0.92)
 	add_child(road)
 
 
@@ -769,15 +787,15 @@ func _build_sky_layer() -> void:
 	ray_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 31
-	for i: int in range(4):
+	for i: int in range(7):
 		var ray: Polygon2D = Polygon2D.new()
-		var width: float = rng.randf_range(70.0, 150.0)
+		var width: float = rng.randf_range(90.0, 200.0)
 		var length: float = map_size.length() * 0.8
 		ray.polygon = PackedVector2Array([
 			Vector2(0, 0), Vector2(width, 0),
 			Vector2(width + 180.0, length), Vector2(180.0, length),
 		])
-		ray.color = Color(1.0, 0.95, 0.72, 0.075)
+		ray.color = Color(1.0, 0.95, 0.72, 0.115)
 		ray.material = ray_material
 		ray.rotation_degrees = -28.0
 		ray.position = Vector2(rng.randf_range(0.0, map_size.x), -80.0)
@@ -798,7 +816,7 @@ func _build_sky_layer() -> void:
 	_clouds = Node2D.new()
 	_clouds.z_index = 44
 	add_child(_clouds)
-	for i: int in range(5):
+	for i: int in range(7):
 		var cloud: Node2D = Node2D.new()
 		var seed_value: int = 50 + i * 7
 		cloud.draw.connect(func() -> void:
@@ -838,7 +856,7 @@ func _build_ambient_life() -> void:
 	dust_material.scale_max = 1.7
 	dust_material.color = Color(1.0, 0.97, 0.85, 0.30)
 	dust.process_material = dust_material
-	dust.amount = int(70 * area_factor)
+	dust.amount = int(130 * area_factor)
 	dust.lifetime = 9.0
 	dust.preprocess = 9.0
 	dust.position = map_size / 2.0
@@ -867,7 +885,7 @@ func _build_ambient_life() -> void:
 	blink_texture.gradient = blink
 	fly_material.color_ramp = blink_texture
 	_fireflies.process_material = fly_material
-	_fireflies.amount = int(46 * area_factor)
+	_fireflies.amount = int(90 * area_factor)
 	_fireflies.lifetime = 5.0
 	_fireflies.preprocess = 5.0
 	_fireflies.position = map_size / 2.0
@@ -990,6 +1008,20 @@ func _advance_dialog() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("lens_zoom") and player != null:
+		# The cameraman racks in tight, then slowly relaxes back out.
+		var camera: Camera2D = player.get_node_or_null("Camera2D") as Camera2D
+		if camera == null:
+			for child: Node in player.get_children():
+				if child is Camera2D:
+					camera = child
+		if camera != null:
+			var snap: Tween = create_tween()
+			snap.tween_property(camera, "zoom", Vector2(1.5, 1.5), 0.15)\
+				.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+			snap.tween_property(camera, "zoom", Vector2.ONE, 6.5)\
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		return
 	if event.is_action_pressed("char_menu") and not _dialog.visible:
 		get_viewport().set_input_as_handled()
 		var sfx_menu: Node = get_node_or_null("/root/SfxManager")

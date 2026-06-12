@@ -1,10 +1,11 @@
 extends AreaBase
-## Aethertown, third pass: a real castle town. Castle Aetherhold rises in
-## layered stone (rear towers behind the curtain wall behind the keep), a
-## river runs the west side under two bridges, the avenue is cobbled and
-## gated, homes are bigger and walk-behindable (chests hide back there),
-## and the streets play out little bubble-talk scenes — shoppers haggling,
-## a farmer arguing with his cow, kids playing tag.
+## Aethertown, fourth pass: twice the town again (3840x2400), ringed by deep
+## woods. A winding river angles NW->S under three cobbled bridges (water
+## first, stone second — splashes, glints, fishermen, a stone-skipping kid).
+## Castle Aetherhold fills the north behind guarded gates and flanking
+## thickets (that's why you can't walk around it). Cobbled avenue and plaza,
+## bigger walk-behind homes with chests hidden in their shadows, a working
+## farm, the shop yard, guards, gates, and the same quest-bearing souls.
 
 var _world: Node
 
@@ -13,7 +14,8 @@ func _init() -> void:
 	area_name = "AETHERTOWN — under the walls of Castle Aetherhold"
 	music_track = "town"
 	ambience_profile = "town"
-	map_size = Vector2(2560, 1600)
+	map_size = Vector2(3840, 2400)
+	default_spawn = Vector2(2100, 1260)
 	frost_level = 0.05
 	fog_level = 0.06
 
@@ -21,40 +23,230 @@ func _init() -> void:
 func _setup_area() -> void:
 	_world = get_node_or_null("/root/WorldState")
 	_build_grounds()
+	_build_woods_ring()
 	_build_river()
 	_build_castle()
 	_build_homes()
-	add_save_crystal(Vector2(1375, 800))
+	_build_farm()
+	add_save_crystal(Vector2(2100, 980))
 	_build_npcs_and_quests()
 	_build_vignettes()
 	_build_life()
 
 	# Night-life: lanterns + torches along the cobbles; gentle snowfall.
-	add_point_light(Vector2(420, 330), Color(1.0, 0.8, 0.5), 1.4, 1.0)
-	add_point_light(Vector2(1560, 850), Color(1.0, 0.78, 0.48), 1.3, 0.95)
-	add_point_light(Vector2(300, 1060), Color(1.0, 0.82, 0.55), 1.1, 0.8)
+	add_point_light(Vector2(920, 880), Color(1.0, 0.8, 0.5), 1.4, 1.0)
+	add_point_light(Vector2(2480, 1270), Color(1.0, 0.78, 0.48), 1.3, 0.95)
+	add_point_light(Vector2(820, 1500), Color(1.0, 0.82, 0.55), 1.1, 0.8)
 	for torch_pos: Vector2 in [
-		Vector2(520, 640), Vector2(940, 640), Vector2(1640, 640), Vector2(2120, 640),
-		Vector2(1300, 720), Vector2(1460, 720), Vector2(960, 1240),
+		Vector2(1100, 1130), Vector2(1600, 1130), Vector2(2700, 1130), Vector2(3200, 1130),
+		Vector2(1900, 770), Vector2(2300, 770), Vector2(860, 1480), Vector2(3060, 1900),
 	]:
 		add_torch(torch_pos)
-	add_road_gate(Vector2(2470, 655))
-	add_road_gate(Vector2(950, 1450))
-	add_snowfall(170)
+	add_road_gate(Vector2(3640, 1155), 300.0)
+	add_road_gate(Vector2(680, 1155), 260.0)
+	add_snowfall(220)
 
-	add_chest("town_well", Vector2(1180, 900), {"item_hp_potion": 2})
-	add_chest("town_east_garden", Vector2(2300, 950), {"item_aether_draught": 2})
+	add_chest("town_well", Vector2(2280, 1180), {"item_hp_potion": 2})
+	add_chest("town_east_garden", Vector2(3480, 1310), {"item_aether_draught": 2})
 	# Hidden behind buildings — reward for walking where the roofs hide you.
-	add_chest("town_widow_back", Vector2(2380, 300), {"item_hp_potion": 2, "item_aether_draught": 1})
-	add_chest("town_castle_lee", Vector2(800, 470), {"item_hp_potion": 1})
+	add_chest("town_widow_back", Vector2(3350, 700), {"item_hp_potion": 2, "item_aether_draught": 1})
+	add_chest("town_castle_lee", Vector2(1340, 880), {"item_hp_potion": 1})
 
 	# Road out, east edge — into the Verdant Pass.
-	add_exit(Rect2(2520, 560, 40, 200), "res://world/forest.tscn", Vector2(130, 980))
+	add_exit(Rect2(3800, 1040, 40, 220), "res://world/forest.tscn", Vector2(130, 980))
 	var gate_label: Label = Label.new()
 	gate_label.text = "To the Verdant Pass >"
-	gate_label.position = Vector2(2290, 530)
+	gate_label.position = Vector2(3560, 1000)
 	gate_label.add_theme_font_size_override("font_size", 14)
 	add_child(gate_label)
+
+
+func _build_grounds() -> void:
+	var grass: Texture2D = load(
+		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
+	) if ResourceLoader.exists(
+		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
+	) else null
+	if grass != null:
+		var ground: TextureRect = TextureRect.new()
+		ground.texture = grass
+		ground.stretch_mode = TextureRect.STRETCH_TILE
+		ground.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ground.size = map_size
+		ground.z_index = -10
+		add_child(ground)
+	else:
+		add_rect(Rect2(Vector2.ZERO, map_size), Color(0.16, 0.20, 0.16), -10)
+	# Cobbled avenue west bridge -> east gate, the plaza apron, market lane
+	# (the lane hugs the river's WEST side down to the shop yard).
+	add_cobble_road(Rect2(240, 1100, 3600, 110))
+	add_cobble_road(Rect2(1860, 660, 480, 440))
+	add_cobble_road(Rect2(620, 1210, 110, 360), true)
+
+
+## The deep woods ring: the town sits in a forest clearing. Only the east
+## road breaks the treeline.
+func _build_woods_ring() -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 41
+	var step: float = 116.0
+	var x: float = 70.0
+	while x < map_size.x - 60.0:
+		# North edge (the castle owns the middle of it).
+		if x < 1180.0 or x > 3020.0:
+			add_prop("pine_cluster", Vector2(x, 130 + rng.randf_range(-16, 16)), 2.0, true, true)
+		# South edge.
+		add_prop("pine_cluster", Vector2(x, 2300 + rng.randf_range(-14, 14)), 2.0, true, true)
+		x += step
+	var y: float = 220.0
+	while y < map_size.y - 140.0:
+		add_prop("pine_cluster", Vector2(90, y), 2.0, true, true)
+		# East edge parts only for the exit road.
+		if y < 980.0 or y > 1330.0:
+			add_prop("pine_cluster", Vector2(3760, y), 2.0, true, true)
+		y += step
+	# Castle flank thickets: the reason nobody strolls around the walls.
+	for flank_x: float in [1180.0, 1300.0, 1420.0]:
+		for flank_y: float in [180.0, 380.0, 560.0]:
+			add_prop("pine_cluster", Vector2(flank_x + randf_range(-18, 18), flank_y), 2.0, true, true)
+	for flank_x: float in [3040.0, 3160.0, 3280.0]:
+		for flank_y: float in [180.0, 380.0, 560.0]:
+			add_prop("pine_cluster", Vector2(flank_x + randf_range(-18, 18), flank_y), 2.0, true, true)
+
+
+## The river: in from the north woods, angling SE in broad steps, out the
+## south — WATER first (wide channel, thin banks), three cobbled bridges.
+func _build_river() -> void:
+	var water: Texture2D = AssetLibrary.texture("props", "water_tile")
+	var rocks: Texture2D = AssetLibrary.texture("props", "rock_wall")
+	# Channel segments: straight runs + stair-step diagonals.
+	var segments: Array[Rect2] = [Rect2(480, 0, 150, 700)]
+	var sx: float = 480.0
+	var sy: float = 700.0
+	for step: int in range(6):  # first diagonal: drift east while flowing south
+		segments.append(Rect2(sx + step * 62.0, sy + step * 92.0, 150, 110))
+	sx += 5 * 62.0
+	sy += 6 * 92.0
+	segments.append(Rect2(sx, sy, 150, 480))  # mid straight (x ~790)
+	sy += 480.0
+	for step: int in range(6):  # second diagonal
+		segments.append(Rect2(sx + step * 74.0, sy + step * 90.0, 150, 108))
+	sx += 5 * 74.0
+	sy += 6 * 90.0
+	segments.append(Rect2(sx, sy, 150, map_size.y - sy))  # out the south (x ~1160)
+
+	for segment: Rect2 in segments:
+		if water != null:
+			var flow: TextureRect = TextureRect.new()
+			flow.texture = water
+			flow.stretch_mode = TextureRect.STRETCH_TILE
+			flow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			flow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			flow.position = segment.position
+			flow.size = segment.size / 2.0
+			flow.scale = Vector2(2.0, 2.0)
+			flow.z_index = -8
+			flow.material = AssetLibrary.water_material()
+			add_child(flow)
+		else:
+			add_rect(segment, Color(0.30, 0.55, 0.65, 0.95), -8)
+	# Thin stone lips only on the long straights (water > stone).
+	if rocks != null:
+		for lip_config: Array in [
+			[Vector2(470, 0), 690.0], [Vector2(622, 0), 690.0],
+			[Vector2(780, 1260), 470.0], [Vector2(932, 1260), 470.0],
+		]:
+			var lip: TextureRect = TextureRect.new()
+			lip.texture = rocks
+			lip.stretch_mode = TextureRect.STRETCH_TILE
+			lip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			lip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			lip.position = lip_config[0]
+			lip.size = Vector2(5.0, float(lip_config[1]) / 2.0)
+			lip.scale = Vector2(2.0, 2.0)
+			lip.z_index = -7
+			lip.modulate = Color(0.85, 0.82, 0.8, 0.9)
+			add_child(lip)
+	# Current glints + joint splashes: the water is ALIVE.
+	for glint_config: Array in [
+		[Vector2(555, 60), Vector2(0, 1)], [Vector2(865, 1300), Vector2(0, 1)],
+		[Vector2(1235, 2300), Vector2(0, 1)],
+	]:
+		var glints: CPUParticles2D = CPUParticles2D.new()
+		glints.position = glint_config[0]
+		glints.amount = 26
+		glints.lifetime = 7.0
+		glints.preprocess = 7.0
+		glints.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		glints.emission_rect_extents = Vector2(54, 10)
+		glints.direction = glint_config[1]
+		glints.spread = 5.0
+		glints.gravity = Vector2.ZERO
+		glints.initial_velocity_min = 130.0
+		glints.initial_velocity_max = 180.0
+		glints.scale_amount_min = 1.0
+		glints.scale_amount_max = 2.2
+		glints.color = Color(0.92, 1.0, 1.0, 0.55)
+		glints.z_index = -7
+		add_child(glints)
+	for splash_pos: Vector2 in [
+		Vector2(540, 690), Vector2(700, 1050), Vector2(870, 1270),
+		Vector2(1050, 1980), Vector2(940, 1830),
+	]:
+		var splash: CPUParticles2D = CPUParticles2D.new()
+		splash.position = splash_pos
+		splash.amount = 9
+		splash.lifetime = 0.7
+		splash.preprocess = 0.7
+		splash.spread = 60.0
+		splash.direction = Vector2(0, -1)
+		splash.gravity = Vector2(0, 240)
+		splash.initial_velocity_min = 40.0
+		splash.initial_velocity_max = 90.0
+		splash.scale_amount_min = 1.0
+		splash.scale_amount_max = 2.0
+		splash.color = Color(0.95, 1.0, 1.0, 0.8)
+		splash.z_index = -7
+		add_child(splash)
+	add_point_light(Vector2(560, 500), Color(0.6, 0.85, 1.0), 1.5, 0.5)
+	add_point_light(Vector2(1235, 2330), Color(0.6, 0.85, 1.0), 1.5, 0.5)
+
+	# Walls along the channel, except where the bridges carry you over.
+	var bridges: Array[Rect2] = [
+		Rect2(440, 470, 230, 130),   # north foot bridge
+		Rect2(740, 1090, 250, 130),  # the avenue crossing
+		Rect2(960, 1930, 250, 130),  # the south lane
+	]
+	for segment: Rect2 in segments:
+		var blocked: Rect2 = segment.grow_individual(0, 0, 0, 0)
+		var crossed: bool = false
+		for bridge: Rect2 in bridges:
+			if bridge.intersects(blocked.grow(8.0)):
+				crossed = true
+				# Wall above and below the bridge deck only.
+				if bridge.position.y - blocked.position.y > 24.0:
+					add_wall(Rect2(
+						blocked.position,
+						Vector2(blocked.size.x, bridge.position.y - blocked.position.y)
+					))
+				if blocked.end.y - bridge.end.y > 24.0:
+					add_wall(Rect2(
+						Vector2(blocked.position.x, bridge.end.y),
+						Vector2(blocked.size.x, blocked.end.y - bridge.end.y)
+					))
+		if not crossed:
+			add_wall(blocked)
+	for bridge: Rect2 in bridges:
+		add_cobble_road(bridge)
+		add_rect(Rect2(bridge.position.x, bridge.position.y - 8, bridge.size.x, 8), Color(0.35, 0.26, 0.17), 2)
+		add_rect(Rect2(bridge.position.x, bridge.end.y, bridge.size.x, 8), Color(0.30, 0.22, 0.14), 2)
+		for corner_x: float in [bridge.position.x + 10.0, bridge.end.x - 24.0]:
+			add_prop("posts", Vector2(corner_x, bridge.position.y - 14.0), 1.2, false)
+	add_flowers([
+		Vector2(660, 320), Vector2(450, 760), Vector2(700, 900), Vector2(960, 1340),
+		Vector2(700, 1280), Vector2(1080, 1700), Vector2(1380, 2050), Vector2(1100, 2200),
+	], 29)
 
 
 ## Castle Aetherhold: a full keep in three depth layers (not enterable).
@@ -63,8 +255,7 @@ func _build_castle() -> void:
 		load("res://assets/sprites/ui/stone_panel.png")
 		if ResourceLoader.exists("res://assets/sprites/ui/stone_panel.png") else null
 	)
-	# One wrapper anchored at the wall base so the whole keep Y-sorts as a mass.
-	var base_y: float = 600.0
+	var base_y: float = 640.0
 	var castle: Node2D = Node2D.new()
 	castle.position = Vector2(0, base_y)
 	castle.z_index = SORT_Z
@@ -75,6 +266,7 @@ func _build_castle() -> void:
 			var wall: TextureRect = TextureRect.new()
 			wall.texture = stone
 			wall.stretch_mode = TextureRect.STRETCH_TILE
+			wall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			wall.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			wall.position = rect.position - Vector2(0, base_y)
 			wall.size = rect.size
@@ -83,7 +275,7 @@ func _build_castle() -> void:
 			castle.add_child(wall)
 		else:
 			var block: ColorRect = ColorRect.new()
-			block.color = Color(0.34, 0.35, 0.42) * tint
+			block.color = Color(0.40, 0.41, 0.48) * tint
 			block.position = rect.position - Vector2(0, base_y)
 			block.size = rect.size
 			block.z_index = z
@@ -96,7 +288,7 @@ func _build_castle() -> void:
 			stone_block.call(Rect2(
 				rect.position.x + tooth * tooth_w * 2.0, rect.position.y - 14.0,
 				tooth_w, 14.0
-			), tint * 0.85, z)
+			), tint * 0.8, z)
 
 	var banner: Callable = func(x: float, y: float, z: int) -> void:
 		var flag: ColorRect = ColorRect.new()
@@ -113,49 +305,45 @@ func _build_castle() -> void:
 		castle.add_child(disc)
 
 	# LAYER 1 — the rear keep, dimmer: towers seen over the front wall.
-	var back_tint: Color = Color(0.62, 0.64, 0.74)
-	stone_block.call(Rect2(1060, 0, 640, 220), back_tint, 1)
-	teeth.call(Rect2(1060, 0, 640, 0), back_tint, 1)
-	for tower_x: float in [1010.0, 1700.0]:
-		stone_block.call(Rect2(tower_x, -40, 110, 280), back_tint, 1)
+	var back_tint: Color = Color(0.74, 0.76, 0.86)
+	stone_block.call(Rect2(1680, 0, 840, 240), back_tint, 1)
+	teeth.call(Rect2(1680, 0, 840, 0), back_tint, 1)
+	for tower_x: float in [1630.0, 2420.0]:
+		stone_block.call(Rect2(tower_x, -40, 110, 300), back_tint, 1)
 		teeth.call(Rect2(tower_x, -40, 110, 0), back_tint, 1)
 	# The great keep rises tallest, dead center.
-	stone_block.call(Rect2(1280, -80, 200, 360), Color(0.78, 0.80, 0.88), 2)
-	teeth.call(Rect2(1280, -80, 200, 0), Color(0.78, 0.80, 0.88), 2)
-	banner.call(1380.0, -40.0, 3)
+	stone_block.call(Rect2(1990, -90, 220, 380), Color(1.05, 1.06, 1.12), 2)
+	teeth.call(Rect2(1990, -90, 220, 0), Color.WHITE, 2)
+	banner.call(2100.0, -48.0, 3)
 
 	# LAYER 2 — the front curtain wall, full brightness.
-	stone_block.call(Rect2(880, 200, 1000, 400), Color.WHITE, 4)
-	teeth.call(Rect2(880, 200, 1000, 0), Color.WHITE, 4)
-	# Parapet walk shadow-line.
+	stone_block.call(Rect2(1500, 240, 1200, 400), Color(1.18, 1.18, 1.22), 4)
+	teeth.call(Rect2(1500, 240, 1200, 0), Color(1.1, 1.1, 1.15), 4)
 	var walkline: ColorRect = ColorRect.new()
-	walkline.color = Color(0.0, 0.0, 0.05, 0.35)
-	walkline.position = Vector2(880, 246 - base_y)
-	walkline.size = Vector2(1000, 10)
+	walkline.color = Color(0.0, 0.0, 0.05, 0.30)
+	walkline.position = Vector2(1500, 288 - base_y)
+	walkline.size = Vector2(1200, 10)
 	walkline.z_index = 4
 	castle.add_child(walkline)
-	# Buttresses give the wall its rhythm.
-	for buttress_x: float in [960.0, 1140.0, 1620.0, 1800.0]:
-		stone_block.call(Rect2(buttress_x, 380, 34, 220), Color(0.8, 0.8, 0.86), 5)
+	for buttress_x: float in [1600.0, 1800.0, 2360.0, 2560.0]:
+		stone_block.call(Rect2(buttress_x, 430, 36, 210), Color(1.0, 1.0, 1.05), 5)
 
 	# LAYER 3 — front towers, gatehouse, windows, the gate.
-	for tower_x: float in [880.0, 1770.0]:
-		stone_block.call(Rect2(tower_x, 110, 130, 490), Color(1.04, 1.04, 1.08), 6)
-		teeth.call(Rect2(tower_x, 110, 130, 0), Color.WHITE, 6)
-		banner.call(tower_x + 65.0, 160.0, 7)
-	for tower_x: float in [1150.0, 1530.0]:
-		stone_block.call(Rect2(tower_x, 150, 110, 450), Color(0.96, 0.96, 1.0), 6)
-		teeth.call(Rect2(tower_x, 150, 110, 0), Color.WHITE, 6)
-	# Gatehouse around the arch.
-	stone_block.call(Rect2(1300, 250, 210, 350), Color(1.06, 1.06, 1.1), 7)
-	teeth.call(Rect2(1300, 250, 210, 0), Color.WHITE, 7)
-	banner.call(1340.0, 300.0, 8)
-	banner.call(1470.0, 300.0, 8)
-	# Lit windows (they matter at night).
+	for tower_x: float in [1500.0, 2570.0]:
+		stone_block.call(Rect2(tower_x, 140, 130, 500), Color(1.24, 1.24, 1.3), 6)
+		teeth.call(Rect2(tower_x, 140, 130, 0), Color(1.15, 1.15, 1.2), 6)
+		banner.call(tower_x + 65.0, 190.0, 7)
+	for tower_x: float in [1790.0, 2300.0]:
+		stone_block.call(Rect2(tower_x, 180, 110, 460), Color(1.14, 1.14, 1.2), 6)
+		teeth.call(Rect2(tower_x, 180, 110, 0), Color(1.08, 1.08, 1.14), 6)
+	stone_block.call(Rect2(1990, 300, 220, 340), Color(1.28, 1.28, 1.34), 7)
+	teeth.call(Rect2(1990, 300, 220, 0), Color(1.18, 1.18, 1.24), 7)
+	banner.call(2030.0, 350.0, 8)
+	banner.call(2170.0, 350.0, 8)
 	for window_pos: Vector2 in [
-		Vector2(940, 300), Vector2(1080, 380), Vector2(1180, 260), Vector2(1340, -20),
-		Vector2(1410, 60), Vector2(1560, 260), Vector2(1700, 380), Vector2(1810, 300),
-		Vector2(1240, 440), Vector2(1640, 440),
+		Vector2(1560, 340), Vector2(1700, 420), Vector2(1840, 300), Vector2(2050, -30),
+		Vector2(2130, 60), Vector2(2350, 300), Vector2(2480, 420), Vector2(2620, 340),
+		Vector2(1940, 480), Vector2(2260, 480),
 	]:
 		var window: ColorRect = ColorRect.new()
 		window.color = Color(1.0, 0.85, 0.45, 0.9)
@@ -167,149 +355,36 @@ func _build_castle() -> void:
 	# The gate: dark arch, portcullis bars, brazier pair.
 	var arch: ColorRect = ColorRect.new()
 	arch.color = Color(0.07, 0.06, 0.09)
-	arch.position = Vector2(1355, 480 - base_y)
-	arch.size = Vector2(100, 120)
+	arch.position = Vector2(2045, 520 - base_y)
+	arch.size = Vector2(110, 120)
 	arch.z_index = 8
 	castle.add_child(arch)
 	for bar: int in range(5):
 		var iron: ColorRect = ColorRect.new()
 		iron.color = Color(0.22, 0.22, 0.26)
-		iron.position = Vector2(1361 + bar * 22, 480 - base_y)
+		iron.position = Vector2(2052 + bar * 24, 520 - base_y)
 		iron.size = Vector2(5, 120)
 		iron.z_index = 9
 		castle.add_child(iron)
-	add_point_light(Vector2(1330, 560), Color(1.0, 0.62, 0.25), 1.0, 1.1)
-	add_point_light(Vector2(1480, 560), Color(1.0, 0.62, 0.25), 1.0, 1.1)
-	add_interactable(Vector2(1405, 640), "Knock at the castle gate", func() -> void:
+	add_point_light(Vector2(2020, 610), Color(1.0, 0.62, 0.25), 1.0, 1.1)
+	add_point_light(Vector2(2180, 610), Color(1.0, 0.62, 0.25), 1.0, 1.1)
+	add_interactable(Vector2(2100, 690), "Knock at the castle gate", func() -> void:
 		show_dialog([
 			"The gatekeeper's slit slides open, then shut.",
 			"Gatekeeper: 'Pilgrims to the fields. Petitioners to the chapel. Neither enters Aetherhold.'",
 		]))
-	# Solid mass + sun shadow + grounding.
-	add_wall(Rect2(870, 0, 1020, 600))
-	add_occluder(Rect2(880, 200, 1000, 400))
-	add_ground_shadow(Vector2(1380, 620), 1150.0)
-
-
-func _build_grounds() -> void:
-	var grass: Texture2D = load(
-		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
-	) if ResourceLoader.exists(
-		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
-	) else null
-	if grass != null:
-		var ground: TextureRect = TextureRect.new()
-		ground.texture = grass
-		ground.stretch_mode = TextureRect.STRETCH_TILE
-		ground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		ground.size = map_size
-		ground.z_index = -10
-		add_child(ground)
-	else:
-		add_rect(Rect2(Vector2.ZERO, map_size), Color(0.16, 0.20, 0.16), -10)
-	# Cobbled avenue, gate plaza, and market lane (real stone underfoot now).
-	add_cobble_road(Rect2(210, 600, 2350, 110))
-	add_cobble_road(Rect2(880, 710, 120, 890), true)
-	add_cobble_road(Rect2(1340, 710, 130, 130), true)
-	# The plaza fans out before the gate in packed earth.
-	var dirt: Texture2D = AssetLibrary.texture("props", "dirt_patch")
-	if dirt != null:
-		var plaza: TextureRect = TextureRect.new()
-		plaza.texture = dirt
-		plaza.stretch_mode = TextureRect.STRETCH_TILE
-		plaza.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		plaza.position = Vector2(1180, 700)
-		plaza.size = Vector2(230, 110)
-		plaza.scale = Vector2(2.0, 2.0)
-		plaza.z_index = -9
-		plaza.modulate = Color(1.0, 0.98, 0.92, 0.9)
-		add_child(plaza)
-	# Pine breaks along the north edge + green hedges and single pines about town.
-	for x: float in [60.0, 360.0, 660.0, 1980.0, 2280.0, 2500.0]:
-		add_prop("pine_cluster", Vector2(x, 150), 2.0, true, true)
-	for pos: Vector2 in [
-		Vector2(620, 760), Vector2(1700, 770), Vector2(2210, 760), Vector2(330, 1380),
-		Vector2(1840, 1180), Vector2(2470, 1100),
+	add_wall(Rect2(1490, 0, 1220, 640))
+	add_occluder(Rect2(1500, 240, 1200, 400))
+	add_ground_shadow(Vector2(2100, 660), 1350.0)
+	# The gate guard pair: spears, crimson tabards, no nonsense.
+	for guard_config: Array in [
+		[Vector2(1960, 700), "Halt. State your— ah. Pilgrims. Walk on."],
+		[Vector2(2240, 700), "The Shepherd's woken something out east. Keep to the road."],
 	]:
-		add_prop("pine_single", pos, 2.0, true, true)
-	for pos: Vector2 in [Vector2(760, 900), Vector2(1960, 920), Vector2(1180, 1390)]:
-		add_prop("hedge_block", pos, 1.3, true)
-
-
-## The river: in from the north mists, under two bridges, out the south wall.
-func _build_river() -> void:
-	var channel: Rect2 = Rect2(110, 0, 100, map_size.y)
-	var water: Texture2D = AssetLibrary.texture("props", "water_tile")
-	if water != null:
-		var river: TextureRect = TextureRect.new()
-		river.texture = water
-		river.stretch_mode = TextureRect.STRETCH_TILE
-		river.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		river.position = channel.position
-		river.size = channel.size / 2.0
-		river.scale = Vector2(2.0, 2.0)
-		river.z_index = -8
-		river.material = AssetLibrary.water_material()
-		add_child(river)
-	else:
-		add_rect(channel, Color(0.3, 0.55, 0.65, 0.95), -8)
-	# Stony banks.
-	var rocks: Texture2D = AssetLibrary.texture("props", "rock_wall")
-	for bank_x: float in [channel.position.x - 14.0, channel.end.x - 4.0]:
-		if rocks != null:
-			var bank: TextureRect = TextureRect.new()
-			bank.texture = rocks
-			bank.stretch_mode = TextureRect.STRETCH_TILE
-			bank.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			bank.position = Vector2(bank_x, 0)
-			bank.size = Vector2(9, map_size.y / 2.0)
-			bank.scale = Vector2(2.0, 2.0)
-			bank.z_index = -7
-			add_child(bank)
-		else:
-			add_rect(Rect2(bank_x, 0, 18, map_size.y), Color(0.45, 0.4, 0.34), -7)
-	# Drifting glints sell the current.
-	var glints: CPUParticles2D = CPUParticles2D.new()
-	glints.position = Vector2(160, 60)
-	glints.amount = 30
-	glints.lifetime = 9.0
-	glints.preprocess = 9.0
-	glints.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	glints.emission_rect_extents = Vector2(40, 10)
-	glints.direction = Vector2(0, 1)
-	glints.spread = 4.0
-	glints.gravity = Vector2.ZERO
-	glints.initial_velocity_min = 150.0
-	glints.initial_velocity_max = 190.0
-	glints.scale_amount_min = 1.0
-	glints.scale_amount_max = 2.0
-	glints.color = Color(0.9, 1.0, 1.0, 0.5)
-	glints.z_index = -7
-	add_child(glints)
-	add_point_light(Vector2(160, 660), Color(0.6, 0.85, 1.0), 1.6, 0.5)
-	# Two bridges carry the roads; the rest of the channel is too cold to ford.
-	add_wall(Rect2(96, 0, 128, 590))
-	add_wall(Rect2(96, 720, 128, 480))
-	add_wall(Rect2(96, 1340, 128, 260))
-	for bridge_rect: Rect2 in [Rect2(80, 600, 160, 110), Rect2(80, 1210, 160, 120)]:
-		add_cobble_road(bridge_rect)
-		var rail_top: ColorRect = add_rect(
-			Rect2(bridge_rect.position.x, bridge_rect.position.y - 8, bridge_rect.size.x, 8),
-			Color(0.35, 0.26, 0.17), 2
-		)
-		rail_top.z_index = 2
-		var rail_bottom: ColorRect = add_rect(
-			Rect2(bridge_rect.position.x, bridge_rect.end.y, bridge_rect.size.x, 8),
-			Color(0.30, 0.22, 0.14), 2
-		)
-		rail_bottom.z_index = 2
-		for corner_x: float in [bridge_rect.position.x + 8.0, bridge_rect.end.x - 22.0]:
-			add_prop("posts", Vector2(corner_x, bridge_rect.position.y - 16.0), 1.2, false)
-	# Reeds and riverflowers.
-	add_flowers([
-		Vector2(238, 380), Vector2(244, 520), Vector2(80, 840), Vector2(238, 980),
-		Vector2(86, 1120), Vector2(240, 1420),
-	], 29)
+		var guard: Node2D = add_roamer("castle_guard", [guard_config[0]] as Array[Vector2],
+			[String(guard_config[1]), "Eyes forward, citizen.", "No entry. Chapel's south."] as Array[String],
+			Color(0.85, 0.55, 0.5))
+		guard.scale = Vector2(1.1, 1.1)
 
 
 ## A home: sprite house anchored at its base (walk behind it!), solid below
@@ -325,7 +400,6 @@ func _add_home(pos: Vector2, tall: bool, door_config: Dictionary = {}) -> void:
 	else:
 		footprint = (Vector2(90, 118) if tall else Vector2(168, 104)) * 2.0
 		add_rect(Rect2(pos - footprint / 2.0, footprint), Color(0.35, 0.27, 0.2), 4)
-	# Solid lower body, with the doorway gap open at the bottom-center.
 	var size_full: Vector2 = art.get_size() * home_scale if art != null else footprint
 	var base_bottom: Vector2 = Vector2(pos.x - footprint.x / 2.0, pos.y + size_full.y / 2.0 - footprint.y)
 	add_wall(Rect2(base_bottom, Vector2(footprint.x, footprint.y - 26)))
@@ -356,43 +430,80 @@ func _add_home(pos: Vector2, tall: bool, door_config: Dictionary = {}) -> void:
 
 
 func _build_homes() -> void:
-	# The inn (landmark, not enterable in the slice) + districts of homes.
-	_add_home(Vector2(420, 420), false)  # Pilgrims' Rest
-	_add_home(Vector2(2120, 420), true, {
+	_add_home(Vector2(920, 850), false)  # Pilgrims' Rest (inn), on the avenue
+	_add_home(Vector2(3050, 800), true, {
 		"prompt": "Enter the fisher's home", "title": "THE FISHER'S HOME",
 		"lines": [
 			"Fisher: 'The lake froze in a single night, years back. Nobody fishes the deep holes now.'",
 			"Fisher: 'You hear it too, don't you? The hum under the ice.'",
 		],
 	})
-	_add_home(Vector2(2380, 460), true, {
+	_add_home(Vector2(3350, 860), true, {
 		"prompt": "Enter the widow's home", "title": "THE WIDOW'S HOME",
 		"lines": [
 			"Widow: 'My husband walked the fields one winter and the wolves... well. Mind the road, pilgrim.'",
 		],
 	})
-	_add_home(Vector2(420, 940), true)  # locked home (flavor only)
-	_add_home(Vector2(2150, 1040), true)  # east district homes (locked)
-	_add_home(Vector2(2400, 1290), true)
-	_add_home(Vector2(700, 1330), false)  # the old granary
-	_add_home(Vector2(1560, 1000), true, {
+	_add_home(Vector2(1500, 1450), true)  # locked homes (flavor only)
+	_add_home(Vector2(3000, 1500), true)
+	_add_home(Vector2(3380, 1760), true)
+	_add_home(Vector2(1480, 1900), false)  # the old granary
+	_add_home(Vector2(2480, 1430), true, {
 		"prompt": "Enter the Mercenary Post", "title": "MERCENARY POST — CHURCH CHARTER",
 		"merc": true,
 		"lines": [],
 	})
 	# Shop stall (stub) — barrels, crates, and a cart give it a working yard.
-	add_building(Rect2(150, 1080, 220, 120), Color(0.27, 0.3, 0.35))
-	add_interactable(Vector2(260, 1150), "Browse the shop", func() -> void:
+	add_building(Rect2(700, 1560, 220, 120), Color(0.27, 0.3, 0.35))
+	add_interactable(Vector2(810, 1630), "Browse the shop", func() -> void:
 		show_dialog([
 			"Shopkeep: 'Stock's still on the wagon, friend. After the pilgrimage, maybe.'",
 			"(The shop is a stub in this slice — full trade arrives later.)",
 		]))
-	for pos: Vector2 in [Vector2(395, 1105), Vector2(420, 1140)]:
+	for pos: Vector2 in [Vector2(950, 1585), Vector2(975, 1620)]:
 		add_prop("barrel", pos, 2.0)
-	add_prop("crate", Vector2(400, 1190), 2.0)
-	_add_handcart(Vector2(330, 1255))
-	for pos: Vector2 in [Vector2(2060, 480), Vector2(1500, 1090)]:
+	add_prop("crate", Vector2(955, 1670), 2.0)
+	_add_handcart(Vector2(880, 1730))
+	for pos: Vector2 in [Vector2(2990, 860), Vector2(2420, 1520)]:
 		add_prop("barrel", pos, 2.0)
+	for pos: Vector2 in [
+		Vector2(1700, 1300), Vector2(2700, 950), Vector2(3550, 1550), Vector2(1050, 2050),
+	]:
+		add_prop("pine_single", pos, 2.0, true, true)
+	for pos: Vector2 in [Vector2(1620, 1700), Vector2(2900, 1280), Vector2(2200, 1800)]:
+		add_prop("hedge_block", pos, 1.3, true)
+
+
+## The southeast farm: tilled plots, wheat-gold flowers, hens — and Bess.
+func _build_farm() -> void:
+	var dirt: Texture2D = AssetLibrary.texture("props", "dirt_patch")
+	for plot_pos: Vector2 in [
+		Vector2(2900, 1980), Vector2(3120, 1980), Vector2(2900, 2120), Vector2(3120, 2120),
+	]:
+		if dirt != null:
+			var plot: Sprite2D = Sprite2D.new()
+			plot.texture = dirt
+			plot.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			plot.scale = Vector2(2.0, 2.0)
+			plot.position = plot_pos
+			plot.z_index = -9
+			add_child(plot)
+		else:
+			add_rect(Rect2(plot_pos - Vector2(48, 40), Vector2(96, 80)), Color(0.42, 0.3, 0.2), -9)
+	add_flowers([
+		Vector2(2860, 1940), Vector2(2960, 2050), Vector2(3080, 1940), Vector2(3180, 2060),
+		Vector2(3000, 2160), Vector2(3220, 2160),
+	], 53)
+	var fence: Texture2D = AssetLibrary.texture("props", "fence")
+	if fence != null:
+		for fence_x: float in [2820.0, 2920.0, 3020.0, 3120.0, 3220.0]:
+			var post: Sprite2D = Sprite2D.new()
+			post.texture = fence
+			post.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			post.scale = Vector2(1.6, 1.6)
+			post.position = Vector2(fence_x, 1890)
+			post.z_index = 2
+			add_child(post)
 
 
 ## A little drawn handcart (village clutter the sheet didn't carry).
@@ -417,26 +528,26 @@ func _add_handcart(pos: Vector2) -> void:
 ## Flowers, hens, and the small life of a living town.
 func _build_life() -> void:
 	add_flowers([
-		Vector2(540, 540), Vector2(580, 560), Vector2(620, 535), Vector2(320, 770),
-		Vector2(360, 800), Vector2(1180, 780), Vector2(1240, 800), Vector2(1530, 740),
-		Vector2(2050, 780), Vector2(2230, 720), Vector2(820, 1180), Vector2(860, 1210),
-		Vector2(1700, 1180), Vector2(2300, 1430), Vector2(480, 1180), Vector2(1960, 540),
+		Vector2(1040, 950), Vector2(1080, 980), Vector2(1700, 1000), Vector2(1760, 1030),
+		Vector2(2450, 980), Vector2(2520, 1010), Vector2(2900, 1180), Vector2(3300, 1100),
+		Vector2(1300, 1550), Vector2(1360, 1580), Vector2(2050, 1600), Vector2(2750, 1700),
+		Vector2(3470, 2050), Vector2(1900, 2100), Vector2(2350, 2000), Vector2(1450, 2150),
 	])
-	for hen_home: Vector2 in [Vector2(580, 800), Vector2(660, 840), Vector2(2180, 1180)]:
+	for hen_home: Vector2 in [Vector2(1300, 1980), Vector2(1380, 2030), Vector2(3240, 1930)]:
 		add_chicken(hen_home)
 
 
 ## The bubble-talk street scenes: lives that don't wait for you.
 func _build_vignettes() -> void:
 	# 1) The shop crowd, broke and dreaming.
-	var buyer_a: Node2D = add_roamer("buyer_a", [Vector2(220, 1190)] as Array[Vector2],
+	var buyer_a: Node2D = add_roamer("buyer_a", [Vector2(760, 1690)] as Array[Vector2],
 		[] as Array[String], Color(0.8, 0.7, 0.6))
-	var buyer_b: Node2D = add_roamer("buyer_b", [Vector2(300, 1210)] as Array[Vector2],
+	var buyer_b: Node2D = add_roamer("buyer_b", [Vector2(850, 1700)] as Array[Vector2],
 		[] as Array[String], Color(0.65, 0.7, 0.85))
 	var buyer_c: Node2D = add_roamer("buyer_c", [
-		Vector2(350, 1150), Vector2(310, 1170),
+		Vector2(900, 1640), Vector2(860, 1660),
 	] as Array[Vector2], [] as Array[String], Color(0.85, 0.8, 0.65))
-	add_vignette(Vector2(280, 1160), 330.0, [
+	add_vignette(Vector2(820, 1650), 330.0, [
 		{"node": buyer_a, "lines": ["I'll buy three.", "Why didn't I save more...", "Is THAT new?"]},
 		{"node": buyer_b, "lines": [
 			"I need more money. Darn.", "This stall always has something fresh.",
@@ -446,7 +557,7 @@ func _build_vignettes() -> void:
 	])
 	# 2) A farmer versus a profoundly stubborn cow.
 	var cow: Node2D = Node2D.new()
-	cow.position = Vector2(1980, 1290)
+	cow.position = Vector2(3020, 2050)
 	cow.z_index = SORT_Z
 	cow.draw.connect(func() -> void:
 		cow.draw_circle(Vector2.ZERO, 16.0, Color(0.92, 0.9, 0.86))
@@ -462,68 +573,107 @@ func _build_vignettes() -> void:
 	sway.tween_property(cow, "rotation_degrees", 2.0, 1.4)
 	sway.tween_property(cow, "rotation_degrees", -1.0, 1.4)
 	var farmer: Node2D = add_roamer("farmer", [
-		Vector2(2030, 1290), Vector2(2014, 1290),
+		Vector2(3070, 2050), Vector2(3054, 2050),
 	] as Array[Vector2], [] as Array[String], Color(0.75, 0.65, 0.5))
-	add_vignette(Vector2(2000, 1290), 320.0, [
+	add_vignette(Vector2(3040, 2050), 340.0, [
 		{"node": farmer, "lines": [
 			"Hyah! MOVE, ye great boulder.", "I haven't got all day, Bess.",
 			"The grass is the SAME over there!", "Please. I'm begging now. Officially.",
 		]},
 		{"node": cow, "lines": ["...Mrrh.", "*chews*", "*stares through him*"]},
 	])
-	# 3) Kids playing tag around the plaza well.
+	# 3) Kids playing tag on the plaza.
 	var kid_a: Node2D = add_roamer("kid_a", [
-		Vector2(1130, 880), Vector2(1240, 930), Vector2(1100, 990), Vector2(1010, 910),
+		Vector2(1980, 880), Vector2(2120, 930), Vector2(1960, 1000), Vector2(1880, 910),
 	] as Array[Vector2], [] as Array[String], Color(0.95, 0.8, 0.6))
 	kid_a.scale = Vector2(0.72, 0.72)
 	var kid_b: Node2D = add_roamer("kid_b", [
-		Vector2(1240, 930), Vector2(1100, 990), Vector2(1010, 910), Vector2(1130, 880),
+		Vector2(2120, 930), Vector2(1960, 1000), Vector2(1880, 910), Vector2(1980, 880),
 	] as Array[Vector2], [] as Array[String], Color(0.7, 0.85, 0.95))
 	kid_b.scale = Vector2(0.68, 0.68)
-	add_vignette(Vector2(1120, 930), 340.0, [
+	add_vignette(Vector2(2000, 930), 340.0, [
 		{"node": kid_a, "lines": ["Can't catch me!", "You're IT!", "Too slow! Too slow!"]},
 		{"node": kid_b, "lines": [
 			"No fair, you started early!", "Mum said not past the gate!", "Wait— WAIT—",
 		]},
 	])
+	# 4) The riverbank: two patient fishermen and a stone-skipping kid.
+	var fisher_a: Node2D = add_roamer("fisher_a", [Vector2(420, 540)] as Array[Vector2],
+		[] as Array[String], Color(0.6, 0.7, 0.75))
+	var fisher_b: Node2D = add_roamer("fisher_b", [Vector2(680, 620)] as Array[Vector2],
+		[] as Array[String], Color(0.75, 0.72, 0.6))
+	var skipper: Node2D = add_roamer("skipper", [
+		Vector2(600, 1000), Vector2(640, 1020),
+	] as Array[Vector2], [] as Array[String], Color(0.9, 0.75, 0.6))
+	skipper.scale = Vector2(0.7, 0.7)
+	add_vignette(Vector2(600, 760), 420.0, [
+		{"node": fisher_a, "lines": ["Anything?", "...", "The river's louder than it was."]},
+		{"node": fisher_b, "lines": ["Quiet today.", "Had one. Lost one.", "Mind the current, lad."]},
+		{"node": skipper, "lines": ["Four skips! FOUR!", "That one LOOKED at me.", "Watch THIS one."]},
+	])
+	# His stones actually hit the water.
+	var skip_timer: Timer = Timer.new()
+	skip_timer.wait_time = 5.0
+	add_child(skip_timer)
+	skip_timer.timeout.connect(func() -> void:
+		if player == null or player.position.distance_to(Vector2(600, 1000)) > 500.0:
+			return
+		var plink: CPUParticles2D = CPUParticles2D.new()
+		plink.position = Vector2(720, 1040)
+		plink.one_shot = true
+		plink.emitting = true
+		plink.amount = 8
+		plink.lifetime = 0.5
+		plink.spread = 70.0
+		plink.direction = Vector2(0, -1)
+		plink.gravity = Vector2(0, 260)
+		plink.initial_velocity_min = 50.0
+		plink.initial_velocity_max = 100.0
+		plink.color = Color(0.95, 1.0, 1.0, 0.85)
+		plink.z_index = -7
+		add_child(plink)
+		var cleanup: Tween = plink.create_tween()
+		cleanup.tween_interval(1.0)
+		cleanup.tween_callback(plink.queue_free))
+	skip_timer.start()
 
 
 func _build_npcs_and_quests() -> void:
 	add_roamer("villager_d", [
-		Vector2(1700, 660), Vector2(2300, 660), Vector2(2300, 780),
+		Vector2(2450, 1140), Vector2(3050, 1140), Vector2(3050, 1280),
 	] as Array[Vector2], [
 		"The castle gate hasn't opened for common folk in nine years.",
 		"They light the keep's windows all night. Who for, I wonder.",
 		"Mind the chickens. They bite. Don't laugh — they do.",
 	] as Array[String], Color(0.75, 0.85, 0.7))
 	add_roamer("villager_e", [
-		Vector2(960, 1180), Vector2(960, 1420), Vector2(700, 1420),
+		Vector2(1550, 1700), Vector2(1550, 1980), Vector2(1300, 2020),
 	] as Array[Vector2], [
 		"Fresh bread at dawn, if the granary holds.",
 		"You're with the pilgrimage? Selene keep you.",
 		"My grandmother remembers when the falls didn't freeze.",
 	] as Array[String], Color(0.9, 0.8, 0.75))
 	add_roamer("villager_a", [
-		Vector2(700, 650), Vector2(1150, 650), Vector2(1150, 760), Vector2(700, 760),
+		Vector2(1300, 1140), Vector2(1800, 1140), Vector2(1800, 1260), Vector2(1300, 1260),
 	] as Array[Vector2], [
 		"Hello.", "Hi there.", "Move along, kid.", "I don't have time today.",
 		"Cold's coming early this year.", "The Lancer drinks for free. Church coin.",
 	] as Array[String], Color(0.85, 0.75, 0.65))
 	add_roamer("villager_b", [
-		Vector2(330, 620), Vector2(330, 1000), Vector2(580, 1000),
+		Vector2(990, 1300), Vector2(990, 1560), Vector2(1240, 1560),
 	] as Array[Vector2], [
 		"I'm looking for my cat. Three days now.", "Have you seen a grey cat?",
 		"She answers to 'Ember'. Sometimes.",
 	] as Array[String], Color(0.7, 0.8, 0.9))
 	add_roamer("villager_c", [
-		Vector2(640, 200), Vector2(800, 200), Vector2(800, 330),
+		Vector2(2900, 1450), Vector2(3260, 1450), Vector2(3260, 1600),
 	] as Array[Vector2], [
 		"The chapel bell cracked last Dimming. Never rang right since.",
 		"Don't go past the fields at night.", "Hm? No, nothing. Forget it.",
 	] as Array[String], Color(0.9, 0.85, 0.7))
 
 	# --- Choice quests: words that weigh on the meters --------------------------
-	_add_quest_npc("quest_letter", Vector2(700, 980), Color(0.75, 0.6, 0.5), "Courier",
+	_add_quest_npc("quest_letter", Vector2(1180, 1330), Color(0.75, 0.6, 0.5), "Courier",
 		"Courier: 'This letter proves the miller's husband cheats at dice — and worse. Deliver the truth to her, or burn it and spare the house the shame?'", [
 		{"label": "Deliver the truth (Duty +14, Resolve +8)", "callback": func() -> void:
 			_world.adjust_party_meter("duty", 14.0)
@@ -536,7 +686,7 @@ func _build_npcs_and_quests() -> void:
 			show_dialog(["The letter curls to ash. The lie keeps a roof warm tonight.",
 				"Something of it clings to your hands anyway."])},
 	])
-	_add_quest_npc("quest_smuggler", Vector2(1250, 1100), Color(0.6, 0.65, 0.6), "Nervous man",
+	_add_quest_npc("quest_smuggler", Vector2(2700, 1450), Color(0.6, 0.65, 0.6), "Nervous man",
 		"Nervous man: 'The guards are coming for the grain smuggler tonight. He feeds half the poor quarter. Warn him — or let the law have him?'", [
 		{"label": "Warn the smuggler (Resolve +10, Burden +12)", "callback": func() -> void:
 			_world.adjust_party_meter("resolve", 10.0)
@@ -549,7 +699,7 @@ func _build_npcs_and_quests() -> void:
 			show_dialog(["They take him quietly. The captain nods at you like a colleague.",
 				"It was the lawful thing. The street is very quiet."])},
 	])
-	_add_quest_npc("quest_festival", Vector2(560, 250), Color(0.8, 0.7, 0.85), "Old acolyte",
+	_add_quest_npc("quest_festival", Vector2(1650, 880), Color(0.8, 0.7, 0.85), "Old acolyte",
 		"Old acolyte: 'The Festival of First Light... the \"miracle\" was lamp-oil and mirrors. I rigged it myself, forty years past. Should the town know?'", [
 		{"label": "Tell the town the truth (Duty +12, Resolve -8)", "callback": func() -> void:
 			_world.adjust_party_meter("duty", 12.0)

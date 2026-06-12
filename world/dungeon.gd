@@ -24,6 +24,7 @@ func _setup_area() -> void:
 				var face: TextureRect = TextureRect.new()
 				face.texture = rock
 				face.stretch_mode = TextureRect.STRETCH_TILE
+				face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 				face.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 				face.position = wall_rect.position
 				face.size = wall_rect.size / 2.0

@@ -136,7 +136,7 @@ func test_town_carries_castle_save_and_torches() -> void:
 	var area: AreaBase = load("res://world/town.tscn").instantiate()
 	add_child_autofree(area)
 	await get_tree().process_frame
-	assert_eq(area.map_size, Vector2(2560, 1600), "town doubled in size")
+	assert_eq(area.map_size, Vector2(3840, 2400), "town doubled AGAIN (owner spec)")
 	var prompts: Array[String] = []
 	for entry: Dictionary in area._interactables:
 		prompts.append(String(entry["prompt"]))
@@ -146,7 +146,7 @@ func test_town_carries_castle_save_and_torches() -> void:
 	for node: Node in get_tree().get_nodes_in_group("torch_light"):
 		if area.is_ancestor_of(node):
 			torches += 1
-	assert_eq(torches, 7, "seven town torches")
+	assert_eq(torches, 8, "eight town torches")
 
 
 func test_map_chain_scenes_exist_and_page_toggles() -> void:

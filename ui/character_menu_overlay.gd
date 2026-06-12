@@ -323,68 +323,100 @@ func _member_card(data: CharacterData, blurb: String, world: Node) -> PanelConta
 	var card: PanelContainer = PanelContainer.new()
 	card.custom_minimum_size = Vector2(242, 560)
 	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 3)
+	box.add_theme_constant_override("separation", 5)
 	card.add_child(box)
 
+	# Portrait row: the face (front-on now) beside name + class.
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	box.add_child(head)
 	var portrait: TextureRect = TextureRect.new()
 	var art: Texture2D = AssetLibrary.texture("characters", data.name)
 	if art != null:
 		portrait.texture = art
 		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		portrait.custom_minimum_size = Vector2(0, 72)
+		portrait.custom_minimum_size = Vector2(64, 84)
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	box.add_child(portrait)
-
+	head.add_child(portrait)
+	var titles: VBoxContainer = VBoxContainer.new()
+	titles.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(titles)
 	var name_label: Label = Label.new()
 	name_label.text = data.name
-	name_label.add_theme_font_size_override("font_size", 18)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(name_label)
-	_small(box, "%s — %s" % [data.class_type, data.element], Color(0.8, 0.78, 0.7))
+	name_label.add_theme_font_size_override("font_size", 19)
+	titles.add_child(name_label)
+	var class_label: Label = Label.new()
+	class_label.text = "%s — %s" % [data.class_type, data.element]
+	class_label.add_theme_font_size_override("font_size", 11)
+	class_label.modulate = Color(0.8, 0.78, 0.7)
+	titles.add_child(class_label)
 	_small(box, blurb, Color(0.65, 0.65, 0.7))
 	box.add_child(HSeparator.new())
 
+	# Stats in a tight two-column grid — half the scanning.
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 3)
+	box.add_child(grid)
 	for stat_name: String in [
 		"hp", "aether", "power", "focus", "guard", "ward", "speed",
 		"accuracy", "evasion", "crit",
 	]:
-		_stat_row(box, stat_name.to_upper(), str(int(data.base_stats.get(stat_name, 0))))
+		var tag: Label = Label.new()
+		tag.text = stat_name.to_upper()
+		tag.add_theme_font_size_override("font_size", 11)
+		tag.modulate = Color(0.7, 0.7, 0.72)
+		grid.add_child(tag)
+		var value_label: Label = Label.new()
+		value_label.text = str(int(data.base_stats.get(stat_name, 0)))
+		value_label.add_theme_font_size_override("font_size", 11)
+		value_label.modulate = Color(0.95, 0.92, 0.85)
+		grid.add_child(value_label)
 	box.add_child(HSeparator.new())
 
 	if world != null and world.party_meters.has(data.name):
 		var meters: Dictionary = world.party_meters[data.name]
 		var resolve: float = float(meters.get("resolve", 60.0))
 		var band: String = MeterMath.band_name(MeterMath.resolve_band(resolve))
-		_stat_row(box, "RESOLVE", "%d  (%s)" % [int(resolve), band])
-		_small(box, "Courage: speed, damage, defense.", Color(0.6, 0.6, 0.65))
-		_stat_row(box, "DUTY", str(int(float(meters.get("duty", 50.0)))))
-		_small(box, "Conviction: hits harder, echoes cheaper.", Color(0.6, 0.6, 0.65))
+		_meter_bar(box, "RESOLVE  %d (%s)" % [int(resolve), band], resolve / 120.0,
+			Color(0.92, 0.93, 0.97))
+		_meter_bar(box, "DUTY  %d" % int(float(meters.get("duty", 50.0))),
+			float(meters.get("duty", 50.0)) / 120.0, Color(0.95, 0.8, 0.3))
 		var burden: float = float(meters.get("burden", 0.0))
-		_stat_row(box, "BURDEN", str(int(burden)))
-		_small(
-			box,
-			"Grief: drags speed%s." % (", LOCKS ECHO" if burden >= 80.0 else ""),
-			Color(0.85, 0.4, 0.35) if burden >= 50.0 else Color(0.6, 0.6, 0.65)
-		)
+		_meter_bar(box, "BURDEN  %d%s" % [int(burden), "  · LOCKS ECHO" if burden >= 80.0 else ""],
+			burden / 100.0, Color(0.9, 0.4, 0.35))
 		if data.is_heir:
-			_stat_row(box, "DARKNESS", str(int(float(meters.get("darkness", 0.0)))))
-			_small(box, "Power's price: max HP, accuracy.", Color(0.7, 0.5, 0.85))
+			_meter_bar(box, "DARKNESS  %d" % int(float(meters.get("darkness", 0.0))),
+				float(meters.get("darkness", 0.0)) / 100.0, Color(0.7, 0.5, 0.9))
+		var state: String = PartyMood.member_state(
+			resolve, float(meters.get("duty", 50.0)), burden,
+			float(meters.get("darkness", 0.0)), data.is_heir
+		)
+		var mood: Label = Label.new()
+		mood.text = "— %s —" % state
+		mood.add_theme_font_size_override("font_size", 12)
+		mood.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mood.modulate = PartyMood.state_color(state)
+		box.add_child(mood)
 	return card
 
 
-func _stat_row(parent: VBoxContainer, label_text: String, value: String) -> void:
-	var row: HBoxContainer = HBoxContainer.new()
-	parent.add_child(row)
+## A labeled meter with a slim color bar under it — read at a glance.
+func _meter_bar(parent: VBoxContainer, label_text: String, fraction: float, color: Color) -> void:
 	var tag: Label = Label.new()
 	tag.text = label_text
-	tag.custom_minimum_size = Vector2(96, 0)
-	tag.add_theme_font_size_override("font_size", 12)
-	row.add_child(tag)
-	var value_label: Label = Label.new()
-	value_label.text = value
-	value_label.add_theme_font_size_override("font_size", 12)
-	value_label.modulate = Color(0.95, 0.92, 0.85)
-	row.add_child(value_label)
+	tag.add_theme_font_size_override("font_size", 11)
+	parent.add_child(tag)
+	var track: ColorRect = ColorRect.new()
+	track.color = Color(0.1, 0.1, 0.12, 0.9)
+	track.custom_minimum_size = Vector2(0, 7)
+	parent.add_child(track)
+	var fill: ColorRect = ColorRect.new()
+	fill.color = color
+	fill.position = Vector2(1, 1)
+	fill.size = Vector2(maxf(218.0 * clampf(fraction, 0.0, 1.0), 2.0), 5)
+	track.add_child(fill)
 
 
 func _small(parent: VBoxContainer, text: String, color: Color) -> void:

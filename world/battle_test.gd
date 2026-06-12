@@ -59,6 +59,8 @@ var _target_arrow: SelectionArrow
 var stage: Node2D
 var ui_layer: CanvasLayer
 var presenter: ActionPresenter
+var camera: BattleCamera
+var biome: String = "tundra"
 ## Set when this battle was launched from the world flow (WorldState pending).
 var world_mode: bool = false
 var world_roster: String = ""
@@ -131,6 +133,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	):
 		get_viewport().set_input_as_handled()
 		_on_debug_win()
+		return
+	if event.is_action_pressed("lens_zoom") and camera != null:
+		camera.lens_snap()  # tight fast, relaxes slow
 
 
 func _start_battle(is_defeat_retry: bool) -> void:
@@ -164,8 +169,9 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	else:
 		_spawn_enemies()
 	_build_ui()
-	var camera: BattleCamera = BattleCamera.new()
+	camera = BattleCamera.new()
 	stage.add_child(camera)
+	add_child(BattleWeather.new(biome, camera))
 	var arena_light: PointLight2D = PointLight2D.new()
 	arena_light.texture = load("res://assets/sprites/ui/light_radial.png")
 	arena_light.position = Vector2(640, 330)
@@ -185,6 +191,7 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	presenter = ActionPresenter.new()
 	add_child(presenter)
 	presenter.setup(stage, ui_layer, camera)
+	presenter.stride_fx = _stride_puff
 
 	encounter = CombatEncounter.new()
 	encounter.name = "Encounter"
@@ -224,7 +231,7 @@ const BIOME_LOOKS: Dictionary = {
 
 func _build_battlefield() -> void:
 	var world: Node = get_node_or_null("/root/WorldState")
-	var biome: String = biome_for_scene(
+	biome = biome_for_scene(
 		String(world.return_scene) if world_mode and world != null else "", roster
 	)
 	var art: Texture2D = AssetLibrary.texture(
@@ -275,30 +282,61 @@ func _build_open_stage(biome: String) -> void:
 	else:
 		var cliffs: Texture2D = AssetLibrary.texture("props", "cliff_tall")
 		if cliffs != null:
-			for i: int in range(5):
+			for i: int in range(8):
 				var cliff: Sprite2D = Sprite2D.new()
 				cliff.texture = cliffs
 				cliff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-				cliff.scale = Vector2(1.6, 1.6)
-				cliff.position = Vector2(130 + i * 260, 190)
-				cliff.modulate = Color(0.62, 0.68, 0.85, 0.95)
+				cliff.scale = Vector2(1.05, 1.05)
+				cliff.position = Vector2(90 + i * 165, 218)
+				cliff.modulate = Color(0.60, 0.66, 0.84, 0.9)
 				stage.add_child(cliff)
+		# Haze band settles the horizon against the sky.
+		var haze: ColorRect = ColorRect.new()
+		haze.color = Color(look[1], 0.45)
+		haze.position = Vector2(0, 226)
+		haze.size = Vector2(1280, 84)
+		stage.add_child(haze)
 	_build_ground_shelf(biome, 1.0)
 
 
 ## The fighting platform: textured ground + a stone terrace lip + scatter.
-func _build_ground_shelf(biome: String, opacity: float) -> void:
-	var look: Array = BIOME_LOOKS.get(biome, BIOME_LOOKS["tundra"])
+func _build_ground_shelf(biome_name: String, opacity: float) -> void:
+	var look: Array = BIOME_LOOKS.get(biome_name, BIOME_LOOKS["tundra"])
 	var ground_top: float = 306.0
 	var grass: Texture2D = null
-	if biome in ["meadow", "forest"] and ResourceLoader.exists(
+	if biome_name in ["meadow", "forest"] and ResourceLoader.exists(
 		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
 	):
 		grass = load("res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png")
-	if grass != null:
+	var rock: Texture2D = AssetLibrary.texture("props", "rock_wall")
+	if biome_name == "cavern" and rock != null:
+		# A full hewn-stone floor, cool-tinted, with light pools under the ranks
+		# so everyone clearly STANDS somewhere even against the painted dark.
+		var hewn: TextureRect = TextureRect.new()
+		hewn.texture = rock
+		hewn.stretch_mode = TextureRect.STRETCH_TILE
+		hewn.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hewn.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		hewn.position = Vector2(0, ground_top)
+		hewn.size = Vector2(640, (720.0 - ground_top) / 2.0)
+		hewn.scale = Vector2(2.0, 2.0)
+		hewn.modulate = Color(0.42, 0.50, 0.70, maxf(opacity, 0.85))
+		stage.add_child(hewn)
+		for pool_pos: Vector2 in [Vector2(320, 470), Vector2(960, 470)]:
+			var pool: Sprite2D = Sprite2D.new()
+			pool.texture = load("res://assets/sprites/ui/light_radial.png")
+			pool.position = pool_pos
+			pool.scale = Vector2(2.6, 0.9)
+			pool.modulate = Color(0.55, 0.78, 1.0, 0.16)
+			var pool_material: CanvasItemMaterial = CanvasItemMaterial.new()
+			pool_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+			pool.material = pool_material
+			stage.add_child(pool)
+	elif grass != null:
 		var turf: TextureRect = TextureRect.new()
 		turf.texture = grass
 		turf.stretch_mode = TextureRect.STRETCH_TILE
+		turf.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		turf.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		turf.position = Vector2(0, ground_top)
 		turf.size = Vector2(1280, 720 - ground_top)
@@ -306,23 +344,20 @@ func _build_ground_shelf(biome: String, opacity: float) -> void:
 		stage.add_child(turf)
 	else:
 		var floor_rect: ColorRect = ColorRect.new()
-		floor_rect.color = Color(
-			look[2] * (Color(0.55, 0.6, 0.72) if biome == "cavern" else Color(0.72, 0.78, 0.88)),
-			opacity
-		)
+		floor_rect.color = Color(look[2] * Color(0.72, 0.78, 0.88), opacity)
 		floor_rect.position = Vector2(0, ground_top)
 		floor_rect.size = Vector2(1280, 720 - ground_top)
 		stage.add_child(floor_rect)
 	# Terrace lip: tiled rock edge marking where the platform begins.
-	var rock: Texture2D = AssetLibrary.texture("props", "rock_wall")
 	if rock != null:
 		var lip: TextureRect = TextureRect.new()
 		lip.texture = rock
 		lip.stretch_mode = TextureRect.STRETCH_TILE
+		lip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		lip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		lip.position = Vector2(0, ground_top - 12.0)
-		lip.size = Vector2(640, 14)
-		lip.scale = Vector2(2.0, 2.0)
+		lip.position = Vector2(0, ground_top - 14.0)
+		lip.size = Vector2(1280, 16)
+		lip.scale = Vector2(1.0, 1.8)
 		lip.modulate = Color(look[3], opacity)
 		stage.add_child(lip)
 	# Ground mottle: tonal blotches kill the flat fill.
@@ -339,7 +374,7 @@ func _build_ground_shelf(biome: String, opacity: float) -> void:
 			))
 	stage.add_child(mottle)
 	# Biome scatter so each region's arena reads different at a glance.
-	match biome:
+	match biome_name:
 		"tundra", "cavern":
 			for prop_config: Array in [
 				["snow_rocks", Vector2(140, 600), 1.6], ["icicles", Vector2(1180, 420), 1.5],
@@ -352,6 +387,27 @@ func _build_ground_shelf(biome: String, opacity: float) -> void:
 		"meadow":
 			_stage_prop("pine_single", Vector2(1210, 470), 1.8)
 			_stage_prop("barrel", Vector2(90, 600), 1.6)
+
+
+## Footsteps kick the arena's material: snow, dust, or leaf flecks.
+func _stride_puff(pos: Vector2) -> void:
+	var puff: CPUParticles2D = CPUParticles2D.new()
+	puff.position = pos
+	puff.one_shot = true
+	puff.emitting = true
+	puff.amount = 7
+	puff.lifetime = 0.5
+	puff.spread = 70.0
+	puff.direction = Vector2(0, -0.5)
+	puff.initial_velocity_min = 14.0
+	puff.initial_velocity_max = 40.0
+	puff.scale_amount_min = 1.2
+	puff.scale_amount_max = 2.4
+	puff.color = BattleWeather.palette(biome)["fall"]
+	stage.add_child(puff)
+	var cleanup: Tween = puff.create_tween()
+	cleanup.tween_interval(0.9)
+	cleanup.tween_callback(puff.queue_free)
 
 
 func _stage_prop(prop_name: String, pos: Vector2, prop_scale: float) -> void:
@@ -486,13 +542,13 @@ func _apply_carried_meters(member: BaseCombatant, is_defeat_retry: bool) -> void
 
 func _build_ui() -> void:
 	timeline = TurnTimeline.new()
-	timeline.position = Vector2(16, 16)
+	timeline.position = Vector2(320, 8)  # show_preview recenters it across the top
 	ui_layer.add_child(timeline)
 
 	# History log lives in the corner now — the declaration banner is the
 	# loud center-stage narrator.
 	combat_log = CombatLog.new()
-	combat_log.position = Vector2(962, 8)
+	combat_log.position = Vector2(962, 74)  # clear of the turn bar
 	combat_log.custom_minimum_size = Vector2(306, 140)
 	# stone-opaque per playtest feedback (was translucent)
 	ui_layer.add_child(combat_log)
