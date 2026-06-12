@@ -27,7 +27,12 @@ static func _manifest_lookup(section: String, key: String) -> String:
 	return String(_manifest.get_value(section, key, ""))
 
 
+static var _canvas_cache: Dictionary = {}
+
+
 ## e.g. texture("characters", "Aether Wolf 2") -> assets/sprites/characters/aether_wolf.png
+## When a baked normal map (<name>_n.png) sits beside the diffuse, the result
+## is a CanvasTexture pair — 2D lights wrap the pixel art like a relief.
 static func texture(category: String, display_name: String) -> Texture2D:
 	var key: String = to_file_name(display_name)
 	var mapped: String = _manifest_lookup(category, key)
@@ -36,8 +41,18 @@ static func texture(category: String, display_name: String) -> Texture2D:
 	var base: String = "res://assets/sprites/%s/%s" % [category, key]
 	for ext: String in TEXTURE_EXTENSIONS:
 		var path: String = "%s.%s" % [base, ext]
-		if ResourceLoader.exists(path):
+		if not ResourceLoader.exists(path):
+			continue
+		var normal_path: String = "%s_n.%s" % [base, ext]
+		if not ResourceLoader.exists(normal_path):
 			return load(path) as Texture2D
+		if _canvas_cache.has(path):
+			return _canvas_cache[path]
+		var lit: CanvasTexture = CanvasTexture.new()
+		lit.diffuse_texture = load(path)
+		lit.normal_texture = load(normal_path)
+		_canvas_cache[path] = lit
+		return lit
 	return null
 
 
@@ -71,6 +86,23 @@ static func to_file_name(display_name: String) -> String:
 
 
 static var _walk_cache: Dictionary = {}
+static var _foliage_material: ShaderMaterial = null
+static var _water_material: ShaderMaterial = null
+
+
+## Shared wind-sway material for trees/grass sprites.
+static func foliage_material() -> ShaderMaterial:
+	if _foliage_material == null:
+		_foliage_material = ShaderMaterial.new()
+		_foliage_material.shader = load("res://ui/shaders/foliage_sway.gdshader")
+	return _foliage_material
+
+
+static func water_material() -> ShaderMaterial:
+	if _water_material == null:
+		_water_material = ShaderMaterial.new()
+		_water_material.shader = load("res://ui/shaders/water_flow.gdshader")
+	return _water_material
 
 
 ## 4-direction walk animations (down/left/right/up + idle_*) built from

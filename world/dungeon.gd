@@ -7,6 +7,8 @@ extends AreaBase
 func _init() -> void:
 	area_name = "AETHER CRYSTAL SITE II — the glacial deep"
 	music_track = "dungeon"
+	frost_level = 0.12
+	fog_level = 0.3
 
 
 func _setup_area() -> void:
@@ -64,6 +66,7 @@ func _setup_area() -> void:
 	var pulse: Tween = crystal.create_tween().set_loops()
 	pulse.tween_property(crystal, "modulate:a", 0.5, 1.2)
 	pulse.tween_property(crystal, "modulate:a", 1.0, 1.2)
+	add_point_light(Vector2(640, 360), Color(0.78, 0.55, 1.0), 1.7, 1.15)
 	add_interactable(Vector2(640, 360), "Touch the memory crystal", func() -> void:
 		show_dialog([
 			"The crystal stirs. Voices older than the ice press against your mind...",
@@ -72,6 +75,7 @@ func _setup_area() -> void:
 
 	# Zone 3: the boss door.
 	var door: ColorRect = add_rect(Rect2(1150, 300, 60, 140), Color(0.55, 0.8, 0.95, 0.9), 3)
+	add_point_light(Vector2(1180, 370), Color(0.55, 0.85, 1.0), 1.4, 1.0)
 	var door_pulse: Tween = door.create_tween().set_loops()
 	door_pulse.tween_property(door, "modulate:a", 0.6, 1.0)
 	door_pulse.tween_property(door, "modulate:a", 1.0, 1.0)

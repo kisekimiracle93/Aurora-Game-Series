@@ -37,7 +37,14 @@ func set_active(actor: BaseCombatant) -> void:
 	for member: BaseCombatant in _panels:
 		var controls: Dictionary = _panels[member]
 		var panel: PanelContainer = controls["panel"]
-		panel.self_modulate = Color(1.6, 1.5, 0.9) if member == actor else Color.WHITE
+		var is_active: bool = member == actor
+		panel.self_modulate = Color(1.6, 1.5, 0.9) if is_active else Color.WHITE
+		if is_active:
+			panel.pivot_offset = panel.size / 2.0
+			panel.scale = Vector2(1.05, 1.05)
+			var pulse: Tween = panel.create_tween()
+			pulse.tween_property(panel, "scale", Vector2.ONE, 0.22)\
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _build_panel(member: BaseCombatant) -> Dictionary:

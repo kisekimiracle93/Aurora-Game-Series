@@ -9,6 +9,7 @@ var _config: Dictionary = {}
 func _init() -> void:
 	area_name = "INSIDE"
 	map_size = Vector2(1280, 720)
+	fog_level = 0.02
 
 
 func _setup_area() -> void:
@@ -23,6 +24,7 @@ func _setup_area() -> void:
 	add_rect(Rect2(860, 170, 160, 80), Color(0.30, 0.24, 0.18), 1)  # table
 	add_wall(Rect2(860, 170, 160, 80))
 	add_rect(Rect2(560, 150, 90, 40), Color(0.55, 0.35, 0.2), 1)  # hearth
+	add_point_light(Vector2(605, 175), Color(1.0, 0.6, 0.3), 1.5, 1.2)
 	var title: Label = Label.new()
 	title.text = area_name
 	title.position = Vector2(540, 300)

@@ -20,6 +20,8 @@ MusicManager="*res://world/music_manager.gd"
 UiTheme="*res://world/theme_manager.gd"
 SfxManager="*res://world/sfx_manager.gd"
 WorldState="*res://world/world_state.gd"
+Atmosphere="*res://world/atmosphere_manager.gd"
+PostFX="*res://ui/postfx_manager.gd"
 
 [input]
 

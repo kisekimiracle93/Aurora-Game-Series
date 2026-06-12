@@ -688,3 +688,55 @@ threshold, character menu overlay boot, updated reaction values.
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal (per the
 human: "wait for the memory at the dungeon").
+
+---
+
+## 2D-HD pass (owner-directed): the Octopath treatment
+
+Owner supplied Octopath Traveler / Chained Echoes references and a graphics
+wishlist. Implemented in pure Godot 2D (no plugins, no downloads needed —
+everything generated or built-in). Honest scope calls, agreed direction:
+true 3D billboarding skipped (the stack below fakes the look in 2D), foot-
+planting IK skipped (meaningless at 24px/3 frames), "3-second freeze" became
+scalable hit-stop (constants exposed).
+
+- **Normal-mapped pixel art**: `tools/bake_lighting.gd` bakes bevel normal
+  maps from every sprite's alpha silhouette (23 maps: props + characters +
+  enemies) plus a radial light texture. `AssetLibrary.texture` now returns
+  `CanvasTexture` diffuse+normal pairs automatically — every 2D light wraps
+  the sprites like relief carvings.
+- **2D dynamic lighting + occlusion**: each world area gets a shadow-casting
+  `DirectionalLight2D` sun that arcs and dims with the hour; buildings and
+  cliffs cast real shadows via `LightOccluder2D` footprints; flickering
+  point lights at lanterns, save/memory crystals, the boss door, hearths,
+  and the waterfall; soft radial contact-shadows under big shapes (the
+  affordable SSAO).
+- **Day/night color grading** (`Atmosphere` autoload): a 24h palette ride —
+  warm morning gold → clean noon → desaturated purple dusk → deep blue
+  night — advancing while you walk (6 real minutes per day), frozen during
+  battles/menus; battles sample a softened grade so arenas match the hour.
+- **Post-processing stack** (`PostFX` autoload + `postfx.gdshader`):
+  tilt-shift depth of field (sharp focus band, blurred top/bottom — the
+  Octopath signature), lens vignette, film grain, screen-edge frost that
+  thickens in the fields, and drifting volumetric-style fog. Per-scene
+  moods (world/battle/menu).
+- **Wind + water shaders**: vertex sway on every pine (crowns sway, roots
+  planted); the river flows with pixel-stepped waves, drifting sparkle
+  crests, and a cool sheen.
+- **GPU weather**: `GPUParticles2D` snowfall across town (gentle) and the
+  fields (heavy), preprocessed so it's already falling when you arrive.
+- **Hit-stop weight**: impacts freeze the world at 5% speed — 0.10s light,
+  0.26s heavy, 0.45s echoes — then snap back (knobs in ActionPresenter).
+- **Intelligent battle camera** (`BattleCamera`): leans toward the actor
+  with a degree of roll on windup (the 2.5D feel), zooms 1.16×/1.26×
+  (echoes), punches into the victim on impact with a DoF clamp-down,
+  shakes with the blow, and breathes back out. Elemental light pulses on
+  casters so the normal maps catch fire/ice/dark glow.
+- **UI juice**: command menu pops open with a back-ease, the active HUD
+  panel pulses, stone banner already slams; all Tween-driven.
+
+**Test status:** `168/168 passed (1230 asserts)`; boots clean. New coverage:
+day/night palette keys (warm dawn / white noon / purple dusk / blue night +
+night classification), all four shaders load, baked light + normal-map
+assets exist, CanvasTexture pairing, PostFX moods + pulse, Atmosphere stage
+grading, battle camera rig wired into the presenter.

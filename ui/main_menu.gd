@@ -25,6 +25,9 @@ func _ready() -> void:
 	var music: Node = get_node_or_null("/root/MusicManager")
 	if music != null:
 		music.play_track("menu")
+	var postfx: Node = get_node_or_null("/root/PostFX")
+	if postfx != null:
+		postfx.mood_menu()
 
 
 # --- backdrop -----------------------------------------------------------------

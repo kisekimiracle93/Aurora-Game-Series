@@ -11,6 +11,8 @@ func _init() -> void:
 	area_name = "AETHERTOWN — last light before the crystal fields"
 	music_track = "town"
 	map_size = Vector2(1920, 1280)
+	frost_level = 0.05
+	fog_level = 0.06
 
 
 func _setup_area() -> void:
@@ -19,6 +21,12 @@ func _setup_area() -> void:
 	_build_homes()
 	_build_save_crystal()
 	_build_npcs_and_quests()
+
+	# Night-life: lanterns at the inn, merc post, and shop; gentle snowfall.
+	add_point_light(Vector2(420, 330), Color(1.0, 0.8, 0.5), 1.4, 1.0)
+	add_point_light(Vector2(1500, 850), Color(1.0, 0.78, 0.48), 1.3, 0.95)
+	add_point_light(Vector2(260, 1060), Color(1.0, 0.82, 0.55), 1.1, 0.8)
+	add_snowfall(170)
 
 	add_chest("town_well", Vector2(1180, 880), {"item_hp_potion": 2})
 	add_chest("town_chapel", Vector2(1700, 250), {"item_aether_draught": 2})
@@ -61,6 +69,7 @@ func _build_grounds() -> void:
 			cluster.scale = Vector2(2.0, 2.0)
 			cluster.position = Vector2(x, 140)
 			cluster.z_index = 3
+			cluster.material = AssetLibrary.foliage_material()
 			add_child(cluster)
 			add_wall(Rect2(x - 50, 90, 100, 110))
 
@@ -89,6 +98,7 @@ func _add_home(
 		top_left + Vector2(footprint.x / 2.0 + 28, footprint.y - 26),
 		Vector2(footprint.x / 2.0 - 28, 26)
 	))
+	add_ground_shadow(pos + Vector2(0, footprint.y / 2.0 - 6.0), footprint.x * 1.15)
 	if door_config.is_empty():
 		return
 	var door_pos: Vector2 = pos + Vector2(0, footprint.y / 2.0 + 14)
@@ -161,6 +171,7 @@ func _build_save_crystal() -> void:
 	var pulse: Tween = crystal.create_tween().set_loops()
 	pulse.tween_property(crystal, "modulate:a", 0.55, 0.9)
 	pulse.tween_property(crystal, "modulate:a", 1.0, 0.9)
+	add_point_light(Vector2(960, 480), Color(0.5, 0.95, 1.0), 1.6, 1.2)
 	add_interactable(Vector2(960, 480), "Rest at the save crystal", func() -> void:
 		if _world == null or not _world.in_world_run:
 			show_dialog(["The crystal hums, but answers no one outside a true journey."])

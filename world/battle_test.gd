@@ -139,9 +139,24 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	else:
 		_spawn_enemies()
 	_build_ui()
+	var camera: BattleCamera = BattleCamera.new()
+	stage.add_child(camera)
+	var arena_light: PointLight2D = PointLight2D.new()
+	arena_light.texture = load("res://assets/sprites/ui/light_radial.png")
+	arena_light.position = Vector2(640, 330)
+	arena_light.texture_scale = 5.0
+	arena_light.energy = 0.45
+	arena_light.color = Color(0.95, 0.97, 1.0)
+	stage.add_child(arena_light)
+	var atmosphere: Node = get_node_or_null("/root/Atmosphere")
+	if atmosphere != null:
+		atmosphere.apply_to_battle(stage)
+	var postfx: Node = get_node_or_null("/root/PostFX")
+	if postfx != null:
+		postfx.mood_battle()
 	presenter = ActionPresenter.new()
 	add_child(presenter)
-	presenter.setup(stage, self)
+	presenter.setup(stage, self, camera)
 
 	encounter = CombatEncounter.new()
 	encounter.name = "Encounter"

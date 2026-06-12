@@ -25,16 +25,23 @@ const PACING: Dictionary = {
 
 var stage: Node2D  # the world layer that shakes
 var overlay_parent: Node  # full-screen flash/X layer (UI level)
+var camera: BattleCamera  # the intelligent rig (optional)
 var banner: DeclarationBanner
+
+## Impact freeze (real seconds; world time crawls at 5%). Tunable weight knobs.
+const HIT_STOP_LIGHT: float = 0.10
+const HIT_STOP_HEAVY: float = 0.26
+const HIT_STOP_ECHO: float = 0.45
 ## Headless runs (tests, CI boots) skip all waits — logic stays synchronous.
 var instant: bool = DisplayServer.get_name() == "headless"
 
 var _flash: ColorRect
 
 
-func setup(stage_in: Node2D, overlay_parent_in: Node) -> void:
+func setup(stage_in: Node2D, overlay_parent_in: Node, camera_in: BattleCamera = null) -> void:
 	stage = stage_in
 	overlay_parent = overlay_parent_in
+	camera = camera_in
 	banner = DeclarationBanner.new()
 	overlay_parent.add_child(banner)
 	_flash = ColorRect.new()
@@ -76,6 +83,12 @@ func present_windup(actor: BaseCombatant, ability: AbilityData) -> void:
 	step.tween_property(actor, "position", actor.position + offset, 0.28)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
+	if camera != null and not braces:
+		camera.focus_on(actor.position, ability.ability_type == "echo")
+	# A pulse of elemental light on the caster (normal maps catch it).
+	if not braces:
+		_caster_light(actor.position, ability)
+
 	# Casters gather light; echoes bend the world.
 	if ability.ability_type == "echo":
 		Engine.time_scale = ECHO_TIME_SCALE
@@ -95,11 +108,19 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 	var pace: Array = _pace(ability)
 	var braces: bool = ability.id == "guard" or ability.id == "pray"
 
-	# Weight of impact: every offensive action rattles the world a little;
-	# the heavy stuff rattles it a lot.
+	# Weight of impact: hit-stop freezes the world, the camera punches in,
+	# the screen flashes — heavier deeds, heavier weight.
 	if not braces and ability.damage_type != "none":
 		var heavy: bool = ability.coeff >= 2.2 or ability.ability_type == "echo"
-		shake_stage(14.0 if heavy else 7.0)
+		await _hit_stop(
+			HIT_STOP_ECHO if ability.ability_type == "echo"
+			else (HIT_STOP_HEAVY if heavy else HIT_STOP_LIGHT)
+		)
+		if camera != null:
+			camera.punch(actor.position)
+			camera.shake(16.0 if heavy else 8.0)
+		else:
+			shake_stage(14.0 if heavy else 7.0)
 		_flash_screen(_element_tint(ability.element), 0.16 if heavy else 0.10)
 		if heavy:
 			_x_slash_screen()
@@ -119,7 +140,38 @@ func present_followthrough(actor: BaseCombatant, ability: AbilityData) -> void:
 		var back: Tween = create_tween()
 		back.tween_property(actor, "position", actor.position - offset, 0.24)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	if camera != null:
+		camera.release()
 	banner.dismiss()
+
+
+## The world holds its breath at the moment of impact.
+func _hit_stop(real_seconds: float) -> void:
+	var previous: float = Engine.time_scale
+	Engine.time_scale = 0.05
+	await get_tree().create_timer(real_seconds, true, false, true).timeout
+	Engine.time_scale = 1.0 if previous < 0.06 else previous
+	if Engine.time_scale < 0.06:
+		Engine.time_scale = 1.0
+
+
+func _caster_light(pos: Vector2, ability: AbilityData) -> void:
+	if stage == null or not ResourceLoader.exists("res://assets/sprites/ui/light_radial.png"):
+		return
+	var light: PointLight2D = PointLight2D.new()
+	light.texture = load("res://assets/sprites/ui/light_radial.png")
+	light.position = pos
+	light.color = _element_tint(
+		"Dark" if ability.darkness_cost > 0 else ability.element
+	) if ability.damage_type != "none" or ability.ability_type == "echo" else Color(1, 0.95, 0.8)
+	light.energy = 0.0
+	light.texture_scale = 1.4
+	stage.add_child(light)
+	var tween: Tween = light.create_tween()
+	tween.tween_property(light, "energy", 1.3, 0.3)
+	tween.tween_interval(0.4)
+	tween.tween_property(light, "energy", 0.0, 0.5)
+	tween.tween_callback(light.queue_free)
 
 
 ## Safety: battles can end mid-echo; never leave the world slowed.
@@ -174,5 +226,7 @@ func _element_tint(element: String) -> Color:
 			return Color(1.0, 0.5, 0.2)
 		"Ice":
 			return Color(0.6, 0.85, 1.0)
+		"Dark":
+			return Color(0.66, 0.3, 0.95)
 		_:
 			return Color(1.0, 1.0, 1.0)

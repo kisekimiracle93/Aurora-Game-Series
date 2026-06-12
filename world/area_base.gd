@@ -25,6 +25,9 @@ var _choice_box: VBoxContainer
 var _active_interactable: Dictionary = {}
 var _interactables: Array[Dictionary] = []  # {"area": Area2D, "prompt": String, "callback": Callable}
 var _hud_layer: CanvasLayer  # prompts/dialog ride above the scrolling map
+## Lens mood for this area (PostFX): frost at the screen edges, fog drift.
+var frost_level: float = 0.0
+var fog_level: float = 0.0
 
 
 func _ready() -> void:
@@ -34,6 +37,12 @@ func _ready() -> void:
 		var music: Node = get_node_or_null("/root/MusicManager")
 		if music != null:
 			music.play_track(music_track)
+	var atmosphere: Node = get_node_or_null("/root/Atmosphere")
+	if atmosphere != null:
+		atmosphere.apply_to_area(self)
+	var postfx: Node = get_node_or_null("/root/PostFX")
+	if postfx != null:
+		postfx.mood_world(frost_level, fog_level)
 	_arm_encounter()
 
 
@@ -137,6 +146,7 @@ func add_wall(rect: Rect2) -> void:
 func add_building(rect: Rect2, color: Color, label_text: String = "") -> void:
 	add_rect(rect, color, 2)
 	add_wall(rect)
+	add_occluder(rect)
 	if label_text != "":
 		var sign_label: Label = Label.new()
 		sign_label.text = label_text
@@ -144,6 +154,72 @@ func add_building(rect: Rect2, color: Color, label_text: String = "") -> void:
 		sign_label.position = rect.position + Vector2(6, -22)
 		sign_label.z_index = 3
 		add_child(sign_label)
+
+
+## Sun-shadow caster matching a solid's footprint.
+func add_occluder(rect: Rect2) -> void:
+	var occluder: LightOccluder2D = LightOccluder2D.new()
+	var poly: OccluderPolygon2D = OccluderPolygon2D.new()
+	poly.polygon = PackedVector2Array([
+		Vector2.ZERO, Vector2(rect.size.x, 0), rect.size, Vector2(0, rect.size.y)
+	])
+	occluder.occluder = poly
+	occluder.position = rect.position
+	add_child(occluder)
+
+
+## A warm (or cold) glow that bites at night: lanterns, crystals, fires.
+func add_point_light(
+	pos: Vector2, color: Color, light_scale: float = 1.6, energy: float = 0.9
+) -> PointLight2D:
+	var light: PointLight2D = PointLight2D.new()
+	light.texture = load("res://assets/sprites/ui/light_radial.png")
+	light.position = pos
+	light.color = color
+	light.energy = energy
+	light.texture_scale = light_scale
+	light.shadow_enabled = true
+	light.shadow_color = Color(0, 0, 0.05, 0.4)
+	add_child(light)
+	var flicker: Tween = light.create_tween().set_loops()
+	flicker.tween_property(light, "energy", energy * 0.82, randf_range(0.7, 1.3))
+	flicker.tween_property(light, "energy", energy, randf_range(0.7, 1.3))
+	return light
+
+
+## Soft contact-darkening under big shapes (the cheap seat's SSAO).
+func add_ground_shadow(pos: Vector2, width: float) -> void:
+	var shadow: Sprite2D = Sprite2D.new()
+	shadow.texture = load("res://assets/sprites/ui/light_radial.png")
+	shadow.modulate = Color(0, 0, 0, 0.30)
+	shadow.scale = Vector2(width / 256.0, width / 256.0 * 0.34)
+	shadow.position = pos
+	shadow.z_index = 1
+	add_child(shadow)
+
+
+## GPU snowfall across the whole map.
+func add_snowfall(amount: int = 300) -> void:
+	var snow: GPUParticles2D = GPUParticles2D.new()
+	var material: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	material.emission_box_extents = Vector3(map_size.x / 2.0, 12.0, 1.0)
+	material.direction = Vector3(0.18, 1.0, 0.0)
+	material.spread = 12.0
+	material.gravity = Vector3(6.0, 38.0, 0.0)
+	material.initial_velocity_min = 18.0
+	material.initial_velocity_max = 46.0
+	material.scale_min = 1.2
+	material.scale_max = 2.6
+	material.color = Color(0.96, 0.98, 1.0, 0.85)
+	snow.process_material = material
+	snow.amount = amount
+	snow.lifetime = map_size.y / 40.0
+	snow.preprocess = snow.lifetime
+	snow.position = Vector2(map_size.x / 2.0, -20.0)
+	snow.visibility_rect = Rect2(-map_size.x / 2.0, -40.0, map_size.x, map_size.y + 80.0)
+	snow.z_index = 50
+	add_child(snow)
 
 
 func add_exit(rect: Rect2, target_scene: String, spawn_in_target: Vector2) -> void:

@@ -10,6 +10,8 @@ func _init() -> void:
 	music_track = "world"
 	encounters_enabled = false  # superseded by visible map foes
 	map_size = Vector2(2560, 1600)
+	frost_level = 0.22
+	fog_level = 0.16
 
 
 func _setup_area() -> void:
@@ -18,6 +20,7 @@ func _setup_area() -> void:
 	_build_terrain()
 	_build_river_and_falls()
 	_build_foes()
+	add_snowfall(430)
 
 	add_chest("fields_riverbank", Vector2(1620, 1180), {"item_hp_potion": 1, "item_aether_draught": 1})
 	add_chest("fields_cliffbase", Vector2(2300, 320), {"item_hp_potion": 2})
@@ -47,10 +50,15 @@ func _prop(prop_name: String, pos: Vector2, prop_scale: float = 2.0, solid: bool
 	sprite.scale = Vector2(prop_scale, prop_scale)
 	sprite.position = pos
 	sprite.z_index = 3
+	if prop_name == "pine_cluster":
+		sprite.material = AssetLibrary.foliage_material()
 	add_child(sprite)
 	if solid:
 		var size: Vector2 = art.get_size() * prop_scale * 0.7
 		add_wall(Rect2(pos - size / 2.0, size))
+		if prop_name.begins_with("cliff"):
+			add_occluder(Rect2(pos - size / 2.0, size))
+			add_ground_shadow(pos + Vector2(0, size.y / 2.0 - 8.0), size.x * 1.3)
 
 
 ## Soft tonal mottling + the trodden trail: kills the flat-color blandness.
@@ -146,6 +154,7 @@ func _build_river_and_falls() -> void:
 		river.size = river_rect.size
 		river.z_index = -8
 		river.modulate = Color(0.75, 0.9, 1.0)
+		river.material = AssetLibrary.water_material()
 		add_child(river)
 	else:
 		add_rect(river_rect, Color(0.45, 0.7, 0.9, 0.9), -8)
@@ -182,6 +191,7 @@ func _build_river_and_falls() -> void:
 	mist.color = Color(0.9, 0.97, 1.0, 0.25)
 	mist.z_index = 2
 	add_child(mist)
+	add_point_light(Vector2(1358, 380), Color(0.7, 0.9, 1.0), 1.8, 0.9)
 
 
 func _build_foes() -> void:

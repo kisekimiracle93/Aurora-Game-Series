@@ -32,6 +32,11 @@ func open_for(actor: BaseCombatant) -> void:
 	_actor = actor
 	_show_root()
 	visible = true
+	pivot_offset = Vector2(0, size.y)
+	scale = Vector2(0.94, 0.94)
+	var pop: Tween = create_tween()
+	pop.tween_property(self, "scale", Vector2.ONE, 0.16)\
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func close() -> void:
