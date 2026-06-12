@@ -22,3 +22,5 @@ resolve_gain = 0
 is_item = true
 flat_heal = 120
 flat_aether = 0
+
+description = "Crushed elderbloom in spring water. Mends a soldier's worth of wounds."

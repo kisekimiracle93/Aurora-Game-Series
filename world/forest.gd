@@ -37,21 +37,43 @@ func _setup_area() -> void:
 		Vector2(2000, 900), Vector2(2600, 905), Vector2(1300, 1070), Vector2(1700, 1080),
 	], 13)
 
-	# West: home to Aethertown. East: two routes into the Crystal Fields.
+	# West: home to Aethertown. East: two mouths of the Selinoran Deep.
 	add_exit(Rect2(0, 880, 40, 220), "res://world/town.tscn", Vector2(3700, 1150))
-	add_exit(Rect2(3160, 600, 40, 200), "res://world/outside.tscn", Vector2(110, 700))
-	add_exit(Rect2(3160, 1320, 40, 200), "res://world/outside.tscn", Vector2(110, 1200))
+	add_exit(Rect2(3160, 600, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 3460))
+	add_exit(Rect2(3160, 1320, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 3460))
 	var west: Label = Label.new()
 	west.text = "< Aethertown"
 	west.position = Vector2(50, 850)
 	west.add_theme_font_size_override("font_size", 14)
 	add_child(west)
-	for east_label: Array in [["North pass — the fields >", Vector2(2860, 600)], ["South pass — the fields >", Vector2(2860, 1320)]]:
+	for east_label: Array in [["The Selinoran Deep >", Vector2(2880, 600)], ["The Selinoran Deep >", Vector2(2880, 1320)]]:
 		var sign_label: Label = Label.new()
 		sign_label.text = String(east_label[0])
 		sign_label.position = east_label[1]
 		sign_label.add_theme_font_size_override("font_size", 14)
 		add_child(sign_label)
+	_build_pass_gate()
+	add_grass_detail(340, 19)
+
+
+## The second forced encounter: something in the thicket owns both east
+## mouths. Beat it once and both roads stay open.
+func _build_pass_gate() -> void:
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null and world.cleared_foes.has("gate_pass_horror"):
+		return
+	for gate_rect: Rect2 in [Rect2(3080, 600, 60, 200), Rect2(3080, 1320, 60, 200)]:
+		var trigger: Area2D = _make_zone(gate_rect)
+		trigger.body_entered.connect(func(body: Node2D) -> void:
+			if body != player or world == null or not world.in_world_run:
+				return
+			if world.cleared_foes.has("gate_pass_horror"):
+				return
+			world.pending_foe_id = "gate_pass_horror"
+			world.start_battle(
+				get_tree(), "pass_horror", scene_file_path,
+				Vector2(gate_rect.position.x - 80.0, gate_rect.position.y + 100.0)
+			))
 
 
 func _build_ground() -> void:
@@ -143,7 +165,8 @@ func _build_branches() -> void:
 	clearing_label.add_theme_font_size_override("font_size", 13)
 	clearing_label.modulate = Color(0.75, 0.7, 0.6)
 	add_child(clearing_label)
-	add_chest("forest_alpha_cache", Vector2(1135, 200), {"item_hp_potion": 3, "item_aether_draught": 2})
+	add_chest("forest_alpha_cache", Vector2(1135, 200),
+		{"item_parents_ring": 1, "item_hp_potion": 3, "item_aether_draught": 2})
 
 	# South branch: the smuggler's hollow — a lighter "cheat" cache.
 	add_chest("forest_hollow_cache", Vector2(2105, 1700), {"item_hp_potion": 2})

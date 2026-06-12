@@ -973,3 +973,71 @@ coverage: lens_zoom action, BattleWeather palettes per biome, free-look
 reach bounds, town v4 size/torches.
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal.
+
+---
+
+## Depth pass (owner-directed): deeper, not wider — the emotional gauntlet
+
+The owner defined the core loop: fewer, MEANINGFUL battles; forced
+encounters at the borders that strike the party's hearts before the first
+blow; quiet keepsakes that answer them; relics that grow the vessel; and a
+hoard whose price is a stronger final boss. All built:
+
+- **Keepsakes** (owner-locked, battle-only, meter-moving, never explained):
+  Holy Water (Cavene: RES+20/BUR-10), a Child's Letter (Bastil:
+  DUTY+15/RES+12), a Mother's Ring (Jecht: DRK-25/BUR-10), a Hare Totem
+  (Mati: RES+15/BUR-15). Wrong hands → error sound, "(Not theirs.)", TURN
+  KEPT. Right hands → the owner speaks (use_line bubble + log). Clues live
+  in item descriptions, which now show in the battle menu (hover/focus
+  strip + tooltips). Hidden in chests: widow's back lot, castle lee,
+  alpha's cache, a broken cart in the deep woods.
+- **Relics** (+40 permanent max HP, one per pilgrim, same lock rules):
+  Warden's Sigil (Bastil), Pale Antler (Mati), Predator's Fang (Jecht),
+  Gilded Censer (Cavene) — dropped by the four gate fights. Blessings
+  persist all run (WorldState.hp_blessings).
+- **Forced encounters** with INTRO stage-plays (camera on the enemy, big
+  caption lines, then meter STRIKES on a different half of the party each
+  gate — shown as red pops + log + the struck pilgrims answering back):
+  1. **Gate Warden** (town east road): tests Bastil+Cavene (RES-10).
+  2. **Thicket Horror** (both forest east mouths, one flag): Jecht+Mati
+     (BUR+15, RES-10).
+  3. **Selinoran Predator** (the broken arch): Bastil+Mati (BUR+20,
+     RES-14). Triggered by WALKING to the exit — no sprite.
+  4. **Hoarfang the Glutton** (OPTIONAL, fields north nook): Cavene+Jecht
+     (RES-8). Victory: the hoard (censer + 4 potions + 3 draughts),
+     party RES+20/BUR-20 — and the Shepherd feeds on the loss
+     (HP ×1.35, power ×1.2).
+  Each has a unique moveset (measuring_blow/slow, rending_howl +
+  thicket_grasp, pounce + stalking_dread, gluttonous_bite + hoard_slam)
+  and tinted art derived from the sheets.
+- **Clean victories teach**: win with everyone standing and >60% blood →
+  party RES+4 / BUR-3, logged. Basic patrols amble now (52/122 speed).
+- **NEW AREA — The Deep Selinoran Woods** (1800×3600, between the Pass and
+  the Fields): ONE winding path, no branches, broken claw-scored signs, a
+  single starving pack, two dead-by-day torches, fireflies near double
+  size, clouds ×1.7, fog 0.34. Halfway: the RAIN LINE — cross it once and
+  rain (synthesized, with thunder + lightning flashes that duck the dark)
+  never stops until you leave; re-enter and it waits again. The trees
+  break into bare mountains, a grey stone road, "NORTHERN PASSAGE ▲"
+  signage, a funnel of crags — and the broken archway. Routing: forest
+  east mouths → the Deep → the Fields (map chain + world map now 5 stops).
+- Menu: per-pilgrim one-line identities under the condition tracker; item
+  descriptions everywhere.
+- World polish: avenue runs off both map edges, dirt spurs to the farm and
+  the inn's outhouse, a guards' training yard (straw dummies), drawn grass
+  tufts/clover/pebbles (420 in town, 340 forest, 220 deep), worn-earth
+  fringes blending every road into the grass, gate crossbeams seated ON
+  their posts.
+- On "better character textures": the toolbox carries no higher-res
+  character sheets (checked) — the cast IS 16-bit-era pixel art by design;
+  real redraws are outside what I can produce.
+
+**Test status:** `201/201 passed (1631 asserts)`; boots clean; deep woods
++ town gate + arch verified by rendered frames. New coverage
+(`test_depth_loop.gd`): keepsake locks/clues/lines, relic owners cover the
+party, resolver meter+permanent-HP effects, blessing persistence, all four
+intros name real pilgrims + rosters resolve, unique movesets, hoard
+rewards + Shepherd's price, the Deep boots (size/fireflies/torches/rain
+flag), rain+thunder voices, slowed patrols.
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal.

@@ -41,6 +41,9 @@ var _hud_layer: CanvasLayer  # prompts/dialog/minimap ride above the postfx lens
 ## Lens mood for this area (PostFX): frost at the screen edges, fog drift.
 var frost_level: float = 0.0
 var fog_level: float = 0.0
+## Ambient-life dials (the deep woods turns these up).
+var firefly_scale: float = 1.0
+var cloud_density: float = 1.0
 
 ## Minimap bookkeeping (filled by the add_* helpers).
 var _exit_rects: Array[Rect2] = []
@@ -408,19 +411,20 @@ func add_road_gate(center: Vector2, width: float = 260.0) -> void:
 			add_prop("posts", Vector2(x, center.y), 2.1, false)
 		else:
 			add_rect(Rect2(x - 6, center.y - 48, 12, 96), Color(0.4, 0.3, 0.2), SORT_Z)
+	# The crossbeam sits ON the post tops (posts are ~84px tall at 2.1 scale).
 	var beam: Node2D = Node2D.new()
 	beam.position = center + Vector2(0, 40)
 	beam.z_index = SORT_Z
 	beam.draw.connect(func() -> void:
-		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -116.0, width + 28.0, 11.0), Color(0.36, 0.26, 0.16))
-		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -106.0, width + 28.0, 4.0), Color(0.22, 0.16, 0.10))
+		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -86.0, width + 28.0, 10.0), Color(0.36, 0.26, 0.16))
+		beam.draw_rect(Rect2(-width / 2.0 - 14.0, -77.0, width + 28.0, 4.0), Color(0.22, 0.16, 0.10))
 		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		rng.seed = int(absf(center.x + center.y))
 		var pennant: int = int(width / 64.0)
 		for i: int in range(pennant):
 			var x: float = -width / 2.0 + 24.0 + (width - 48.0) * float(i) / maxf(float(pennant - 1), 1.0)
 			beam.draw_colored_polygon(PackedVector2Array([
-				Vector2(x - 7, -105), Vector2(x + 7, -105), Vector2(x, -86),
+				Vector2(x - 7, -76), Vector2(x + 7, -76), Vector2(x, -58),
 			]), Color(0.62, 0.12, 0.14) if rng.randf() < 0.6 else Color(0.85, 0.78, 0.6)))
 	add_child(beam)
 	for side: float in [-1.0, 1.0]:
@@ -430,7 +434,11 @@ func add_road_gate(center: Vector2, width: float = 260.0) -> void:
 
 
 ## A tiled sandstone-cobble road strip (falls back to a flat color band).
+## A soft worn-earth fringe under it blends the stone into the grass — the
+## eye finishes the edge instead of hitting a hard line.
 func add_cobble_road(rect: Rect2, _vertical: bool = false) -> void:
+	add_rect(rect.grow(7.0), Color(0.40, 0.33, 0.24, 0.45), -9)
+	add_rect(rect.grow(14.0), Color(0.36, 0.34, 0.22, 0.18), -9)
 	var art: Texture2D = AssetLibrary.texture("props", "cobble_fill")
 	if art == null:
 		add_rect(rect, Color(0.52, 0.44, 0.32, 0.9), -8)
@@ -446,6 +454,42 @@ func add_cobble_road(rect: Rect2, _vertical: bool = false) -> void:
 	road.z_index = -8
 	road.modulate = Color(1.0, 0.97, 0.92)
 	add_child(road)
+
+
+## Grass that earns its acreage: drawn tufts, clover shadows, tiny stones.
+func add_grass_detail(count: int, seed_value: int = 23) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var detail: Node2D = Node2D.new()
+	detail.z_index = -9
+	var spots: Array = []
+	for i: int in range(count):
+		spots.append([
+			Vector2(rng.randf_range(40, map_size.x - 40), rng.randf_range(40, map_size.y - 40)),
+			rng.randi_range(0, 2), rng.randf_range(0.8, 1.5),
+			Color(0.22, 0.38, 0.2, rng.randf_range(0.5, 0.9)),
+		])
+	detail.draw.connect(func() -> void:
+		for spot: Array in spots:
+			var pos: Vector2 = spot[0]
+			var kind: int = spot[1]
+			var spot_scale: float = spot[2]
+			var tint: Color = spot[3]
+			if kind == 0:  # a tuft of three blades
+				for blade: int in range(3):
+					var bx: float = (blade - 1) * 3.0 * spot_scale
+					detail.draw_line(
+						pos + Vector2(bx, 0),
+						pos + Vector2(bx + (blade - 1) * 1.5, -7.0 * spot_scale),
+						tint, 1.4
+					)
+			elif kind == 1:  # clover shadow patch
+				detail.draw_circle(pos, 7.0 * spot_scale, Color(0.16, 0.3, 0.16, 0.35))
+				detail.draw_circle(pos + Vector2(5, 3) * spot_scale, 5.0 * spot_scale, Color(0.18, 0.33, 0.17, 0.3))
+			else:  # a pale pebble
+				detail.draw_circle(pos, 2.2 * spot_scale, Color(0.7, 0.7, 0.64, 0.7))
+				detail.draw_circle(pos + Vector2(0.8, 0.8), 1.4 * spot_scale, Color(0.5, 0.5, 0.46, 0.6)))
+	add_child(detail)
 
 
 ## Shared save crystal: drain Darkness, restore Resolve, ease Burden, save.
@@ -816,7 +860,7 @@ func _build_sky_layer() -> void:
 	_clouds = Node2D.new()
 	_clouds.z_index = 44
 	add_child(_clouds)
-	for i: int in range(7):
+	for i: int in range(int(7 * cloud_density)):
 		var cloud: Node2D = Node2D.new()
 		var seed_value: int = 50 + i * 7
 		cloud.draw.connect(func() -> void:
@@ -873,8 +917,8 @@ func _build_ambient_life() -> void:
 	fly_material.initial_velocity_max = 18.0
 	fly_material.spread = 180.0
 	fly_material.direction = Vector3(1, 0, 0)
-	fly_material.scale_min = 1.2
-	fly_material.scale_max = 2.0
+	fly_material.scale_min = 1.2 * firefly_scale
+	fly_material.scale_max = 2.0 * firefly_scale
 	var blink: Gradient = Gradient.new()
 	blink.set_color(0, Color(0.78, 1.0, 0.42, 0.0))
 	blink.add_point(0.25, Color(0.78, 1.0, 0.42, 0.9))

@@ -26,21 +26,21 @@ func _setup_area() -> void:
 	add_chest("fields_riverbank", Vector2(1620, 1180), {"item_hp_potion": 1, "item_aether_draught": 1})
 	add_chest("fields_cliffbase", Vector2(2300, 320), {"item_hp_potion": 2})
 
-	# West: the two Verdant Pass routes home. Far east: the crystal site.
-	add_exit(Rect2(0, 620, 40, 200), "res://world/forest.tscn", Vector2(3060, 700))
-	add_exit(Rect2(0, 1120, 40, 200), "res://world/forest.tscn", Vector2(3060, 1420))
+	# West: back through the arch into the Selinoran Deep. Far east: the site.
+	add_exit(Rect2(0, 620, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 430))
+	add_exit(Rect2(0, 1120, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 430))
 	add_exit(Rect2(2520, 620, 40, 200), "res://world/dungeon.tscn", Vector2(100, 360))
 	add_road_gate(Vector2(2400, 705))
 	add_save_crystal(Vector2(2380, 900))
 	for torch_pos: Vector2 in [Vector2(700, 620), Vector2(1500, 620), Vector2(2200, 620)]:
 		add_torch(torch_pos)
 	var west: Label = Label.new()
-	west.text = "< The Verdant Pass"
+	west.text = "< The Selinoran Deep"
 	west.position = Vector2(50, 590)
 	west.add_theme_font_size_override("font_size", 14)
 	add_child(west)
 	var west2: Label = Label.new()
-	west2.text = "< The Verdant Pass (south)"
+	west2.text = "< The Selinoran Deep (south mouth)"
 	west2.position = Vector2(50, 1090)
 	west2.add_theme_font_size_override("font_size", 14)
 	add_child(west2)
@@ -141,6 +141,12 @@ func _build_terrain() -> void:
 				post.position = Vector2(x, y)
 				post.z_index = 2
 				add_child(post)
+	var hoard_label: Label = Label.new()
+	hoard_label.text = "Bones and bottle-glass ring a nest of plunder. Something fat guards it."
+	hoard_label.add_theme_font_size_override("font_size", 12)
+	hoard_label.modulate = Color(0.8, 0.75, 0.6)
+	hoard_label.position = Vector2(1900, 300)
+	add_child(hoard_label)
 	var hint: Label = Label.new()
 	hint.text = "The beasts keep to their grounds. Step into theirs, and they will not stay there."
 	hint.add_theme_font_size_override("font_size", 13)
@@ -238,6 +244,11 @@ func _build_foes() -> void:
 			[Vector2(1450, 360), Vector2(1560, 470), Vector2(1430, 540)]],
 		["fields_pack_south", "wolfpack", "Aether Wolf",
 			[Vector2(1100, 1320), Vector2(1380, 1440), Vector2(900, 1460)]],
+		# OPTIONAL: Hoarfang guards a hoard in the far north nook. Beat him and
+		# the party rises (Resolve +20, Burden -20, the hoard) — and the
+		# Shepherd rises to match. Your call, pilgrim.
+		["fields_hoarfang", "hoarfang", "Hoarfang the Glutton",
+			[Vector2(2100, 380), Vector2(2180, 420)]],
 	]
 	for config: Array in foes:
 		if world != null and world.cleared_foes.has(String(config[0])):

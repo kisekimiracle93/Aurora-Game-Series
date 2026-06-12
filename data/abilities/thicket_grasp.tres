@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/ability_data.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "thicket_grasp"
+display_name = "Thicket Grasp"
+ability_type = "attack"
+damage_type = "physical"
+element = "Neutral"
+coeff = 1.9
+ct_cost = 900
+targeting = "single"
+statuses = Array[Dictionary]([{"status_id": "bleed", "base_chance": 70.0, "base_duration": 3}])
+description = "Thorned limbs that do not let go cleanly."

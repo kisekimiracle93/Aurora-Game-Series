@@ -61,6 +61,9 @@ static func beds_for(profile: String, night: bool) -> Array[String]:
 			if night:
 				return ["crickets", "night_wind"]
 			return ["wind", "leaves"]
+		"deepwoods":
+			# Always dusk under that canopy: night voices at any hour.
+			return ["crickets", "night_wind"]
 		"fields":
 			if night:
 				return ["night_wind"]
@@ -81,6 +84,8 @@ static func oneshots_for(profile: String, night: bool) -> Array[String]:
 			if night:
 				return ["owl", "wolf_howl", "coyote", "branch", "frog"]
 			return ["bird", "branch", "cricket_solo", "frog"]
+		"deepwoods":
+			return ["owl", "wolf_howl", "branch", "branch", "frog"]
 		"fields":
 			if night:
 				return ["wolf_howl", "owl", "coyote", "branch"]
@@ -104,6 +109,8 @@ func set_scene_profile(profile: String) -> void:
 		_refresh_beds()
 		return
 	_profile = profile
+	for bed_name: String in _extra_beds.keys():
+		set_extra_bed(bed_name, false)  # the rain stays in its woods
 	_refresh_beds()
 	_arm_timer()
 
@@ -191,11 +198,41 @@ func _stream_for(sound_name: String, looping: bool) -> AudioStream:
 	return stream
 
 
+## A bed outside the profile (the deep-woods rain): on until told otherwise.
+var _extra_beds: Dictionary = {}
+
+
+func set_extra_bed(bed_name: String, on: bool, volume_db: float = -9.0) -> void:
+	if on and not _extra_beds.has(bed_name):
+		var stream: AudioStream = _stream_for(bed_name, true)
+		if stream == null:
+			return
+		var player: AudioStreamPlayer = AudioStreamPlayer.new()
+		player.bus = BUS
+		player.stream = stream
+		player.volume_db = -42.0
+		add_child(player)
+		player.play()
+		_extra_beds[bed_name] = player
+		var fade: Tween = create_tween()
+		fade.tween_property(player, "volume_db", volume_db, 2.5)
+	elif not on and _extra_beds.has(bed_name):
+		var old: AudioStreamPlayer = _extra_beds[bed_name]
+		_extra_beds.erase(bed_name)
+		var fade: Tween = create_tween()
+		fade.tween_property(old, "volume_db", -42.0, 2.0)
+		fade.tween_callback(old.queue_free)
+
+
 ## --- the synthesis bench ---------------------------------------------------------
 
 
 static func synth_stream(sound_name: String) -> AudioStreamWAV:
 	match sound_name:
+		"rain":
+			return _rain(8.0)
+		"thunder":
+			return _thunder()
 		"wind":
 			return _wind(7.0, 0.16, 0.10)
 		"night_wind":
@@ -240,6 +277,45 @@ static func synth_stream(sound_name: String) -> AudioStreamWAV:
 			return _rumble()
 		_:
 			return null
+
+
+## Steady bright hiss with droplet patter: the unending deep-woods rain.
+static func _rain(seconds: float) -> AudioStreamWAV:
+	var count: int = int(seconds * SAMPLE_RATE)
+	var samples: PackedFloat32Array = PackedFloat32Array()
+	samples.resize(count)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 99
+	var hiss: float = 0.0
+	for i: int in range(count):
+		hiss = hiss * 0.35 + rng.randf_range(-1.0, 1.0) * 0.65
+		samples[i] = hiss * 0.085
+	for drop: int in range(int(seconds * 22.0)):
+		var start: int = rng.randi_range(0, count - 900)
+		var hz: float = rng.randf_range(900.0, 2400.0)
+		for j: int in range(800):
+			var dt: float = float(j) / SAMPLE_RATE
+			samples[start + j] += sin(TAU * hz * dt) * 0.05 * exp(-dt * 90.0)
+	return _loopable(samples)
+
+
+static func _thunder() -> AudioStreamWAV:
+	var length: float = 2.6
+	var count: int = int(length * SAMPLE_RATE)
+	var samples: PackedFloat32Array = PackedFloat32Array()
+	samples.resize(count)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 13
+	var rumble: float = 0.0
+	for i: int in range(count):
+		var t: float = float(i) / SAMPLE_RATE
+		rumble = clampf(rumble + rng.randf_range(-1.0, 1.0) * 0.08, -1.0, 1.0)
+		var crack: float = 0.5 if t < 0.12 else 0.0
+		samples[i] = (
+			rumble * 0.34 * exp(-t * 1.4) * (0.7 + 0.3 * sin(TAU * t * 2.2))
+			+ rng.randf_range(-1.0, 1.0) * crack * exp(-t * 18.0)
+		)
+	return _to_wav(samples)
 
 
 ## Brown-ish noise with slow swells: the base of every outdoor bed.

@@ -22,3 +22,5 @@ resolve_gain = 0
 is_item = true
 flat_heal = 0
 flat_aether = 45
+
+description = "Distilled starlight, slightly sour. Refills the well of Aether."

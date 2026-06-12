@@ -48,17 +48,45 @@ func _setup_area() -> void:
 
 	add_chest("town_well", Vector2(2280, 1180), {"item_hp_potion": 2})
 	add_chest("town_east_garden", Vector2(3480, 1310), {"item_aether_draught": 2})
-	# Hidden behind buildings — reward for walking where the roofs hide you.
-	add_chest("town_widow_back", Vector2(3350, 700), {"item_hp_potion": 2, "item_aether_draught": 1})
-	add_chest("town_castle_lee", Vector2(1340, 880), {"item_hp_potion": 1})
+	# Hidden behind buildings — and two of them hold more than potions.
+	add_chest("town_widow_back", Vector2(3350, 700),
+		{"item_childs_letter": 1, "item_hp_potion": 2})
+	add_chest("town_castle_lee", Vector2(1340, 880), {"item_holy_water": 1})
 
-	# Road out, east edge — into the Verdant Pass.
+	# Road out, east edge — into the Verdant Pass... past the Warden's test.
 	add_exit(Rect2(3800, 1040, 40, 220), "res://world/forest.tscn", Vector2(130, 980))
 	var gate_label: Label = Label.new()
 	gate_label.text = "To the Verdant Pass >"
-	gate_label.position = Vector2(3560, 1000)
+	gate_label.position = Vector2(3460, 1000)
 	gate_label.add_theme_font_size_override("font_size", 14)
 	add_child(gate_label)
+	_build_warden_gate()
+
+
+## The first forced encounter: nobody leaves until the Warden has seen
+## their nerve. Walking the east road IS accepting the test.
+func _build_warden_gate() -> void:
+	var cleared: bool = _world != null and _world.cleared_foes.has("gate_town_warden")
+	var warden_lines: Array[String] = []
+	if cleared:
+		warden_lines.append("Road's yours, pilgrim. Spend it well.")
+		warden_lines.append("You hit harder than the last lot. Marginally.")
+	else:
+		warden_lines.append("Past me is the Pass — and the Pass eats the unready.")
+		warden_lines.append("Walk the road if you mean it. I'll be your first lesson.")
+	var warden: Node2D = add_roamer(
+		"gate_warden_npc", [Vector2(3590, 1085)] as Array[Vector2],
+		warden_lines, Color(0.95, 0.8, 0.75)
+	)
+	warden.scale = Vector2(1.15, 1.15)
+	if cleared:
+		return
+	var trigger: Area2D = _make_zone(Rect2(3680, 1040, 60, 220))
+	trigger.body_entered.connect(func(body: Node2D) -> void:
+		if body != player or _world == null or not _world.in_world_run:
+			return
+		_world.pending_foe_id = "gate_town_warden"
+		_world.start_battle(get_tree(), "gate_warden", scene_file_path, Vector2(3580, 1150)))
 
 
 func _build_grounds() -> void:
@@ -78,11 +106,15 @@ func _build_grounds() -> void:
 		add_child(ground)
 	else:
 		add_rect(Rect2(Vector2.ZERO, map_size), Color(0.16, 0.20, 0.16), -10)
-	# Cobbled avenue west bridge -> east gate, the plaza apron, market lane
-	# (the lane hugs the river's WEST side down to the shop yard).
-	add_cobble_road(Rect2(240, 1100, 3600, 110))
+	# Cobbled avenue runs clean OFF both map edges (a road that goes places),
+	# the plaza apron, and the market lane down the river's west side.
+	add_cobble_road(Rect2(0, 1100, 3840, 110))
 	add_cobble_road(Rect2(1860, 660, 480, 440))
 	add_cobble_road(Rect2(620, 1210, 110, 360), true)
+	# A dirt spur to the farm, and one behind the inn to the outhouse.
+	add_rect(Rect2(2980, 1210, 90, 740), Color(0.42, 0.34, 0.24, 0.8), -8)
+	add_rect(Rect2(900, 980, 60, 120), Color(0.42, 0.34, 0.24, 0.7), -8)
+	add_grass_detail(420)
 
 
 ## The deep woods ring: the town sits in a forest clearing. Only the east
@@ -466,6 +498,29 @@ func _build_homes() -> void:
 	_add_handcart(Vector2(880, 1730))
 	for pos: Vector2 in [Vector2(2990, 860), Vector2(2420, 1520)]:
 		add_prop("barrel", pos, 2.0)
+	# The outhouse behind the inn (every town has one; few admit it).
+	var outhouse: Node2D = Node2D.new()
+	outhouse.position = Vector2(930, 960)
+	outhouse.z_index = SORT_Z
+	outhouse.draw.connect(func() -> void:
+		outhouse.draw_rect(Rect2(-16, -36, 32, 44), Color(0.4, 0.3, 0.2))
+		outhouse.draw_rect(Rect2(-16, -42, 32, 8), Color(0.3, 0.22, 0.14))
+		outhouse.draw_rect(Rect2(-5, -22, 10, 30), Color(0.26, 0.19, 0.12))
+		outhouse.draw_circle(Vector2(0, -30), 2.5, Color(0.2, 0.15, 0.1)))
+	add_child(outhouse)
+	add_wall(Rect2(914, 932, 32, 36))
+	# The guards' training yard: straw dummies inside a fence line.
+	for dummy_x: float in [2760.0, 2830.0, 2900.0]:
+		var dummy: Node2D = Node2D.new()
+		dummy.position = Vector2(dummy_x, 800)
+		dummy.z_index = SORT_Z
+		dummy.draw.connect(func() -> void:
+			dummy.draw_rect(Rect2(-2.5, -28, 5, 40), Color(0.36, 0.27, 0.17))
+			dummy.draw_rect(Rect2(-16, -22, 32, 5), Color(0.36, 0.27, 0.17))
+			dummy.draw_circle(Vector2(0, -32), 7.0, Color(0.78, 0.68, 0.42))
+			dummy.draw_circle(Vector2(0, -14), 10.0, Color(0.74, 0.64, 0.4)))
+		add_child(dummy)
+		add_wall(Rect2(dummy_x - 8, 786, 16, 22))
 	for pos: Vector2 in [
 		Vector2(1700, 1300), Vector2(2700, 950), Vector2(3550, 1550), Vector2(1050, 2050),
 	]:

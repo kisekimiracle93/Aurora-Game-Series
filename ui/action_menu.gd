@@ -175,6 +175,9 @@ func _make_button(text: String) -> Button:
 	return button
 
 
+var _description_label: Label
+
+
 func _ability_button(ability: AbilityData, force_disabled: bool = false) -> void:
 	var cost_tag: String = "  (%d AE)" % ability.aether_cost if ability.aether_cost > 0 else ""
 	var button: Button = _make_button(ability.display_name + cost_tag)
@@ -182,7 +185,25 @@ func _ability_button(ability: AbilityData, force_disabled: bool = false) -> void
 	if _actor.status.is_spell_blocked() and ability.ability_type == "spell":
 		button.disabled = true
 		button.text += "  [Silenced]"
+	# What it IS: clue-bearing item text and ability flavor surface here.
+	if ability.description != "":
+		button.tooltip_text = ability.description
+		button.mouse_entered.connect(func() -> void: _show_description(ability.description))
+		button.focus_entered.connect(func() -> void: _show_description(ability.description))
 	button.pressed.connect(func() -> void: ability_chosen.emit(ability))
+
+
+## A parchment strip floating above the menu: the hovered entry, explained.
+func _show_description(text: String) -> void:
+	if _description_label == null or not is_instance_valid(_description_label):
+		_description_label = Label.new()
+		_description_label.add_theme_font_size_override("font_size", 11)
+		_description_label.modulate = Color(0.85, 0.83, 0.72)
+		_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_description_label.custom_minimum_size = Vector2(260, 0)
+		add_child(_description_label)
+	_description_label.position = Vector2(6, -54)
+	_description_label.text = text
 
 
 func _folder_button(text: String, opener: Callable) -> void:

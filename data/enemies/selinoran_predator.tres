@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+name = "Selinoran Predator"
+class_type = "Beast"
+element = "Neutral"
+base_stats = {"hp": 580, "aether": 70, "power": 38, "focus": 28, "guard": 26, "ward": 24, "speed": 30, "accuracy": 94, "evasion": 10, "crit": 10}
+affinities = {}
+ability_ids = Array[String](["attack_basic", "pounce", "stalking_dread"])
+ferocity = 1.3
+stability = 0.45
+ai_profile = "hunt_dark"

@@ -36,6 +36,21 @@ var next_interior: Dictionary = {}
 ## Travel trail for the world map: where you are, where you came from.
 var current_area: String = ""
 var previous_area: String = ""
+## Permanent max-HP blessings from the relics (name -> bonus HP this run).
+var hp_blessings: Dictionary = {}
+## Hoarfang's hoard taken: the party rises — and the Shepherd rises to match.
+var hoard_blessing: bool = false
+
+## What falls from each forced encounter when it breaks (per foe id).
+const FOE_REWARDS: Dictionary = {
+	"gate_town_warden": {"items": {"item_warden_sigil": 1}},
+	"gate_pass_horror": {"items": {"item_pale_antler": 1}},
+	"gate_deep_predator": {"items": {"item_predator_fang": 1}},
+	"fields_hoarfang": {
+		"items": {"item_gilded_censer": 1, "item_hp_potion": 4, "item_aether_draught": 3},
+		"resolve": 20.0, "burden": -20.0, "hoard": true,
+	},
+}
 
 
 func note_area_visit(scene_path: String) -> void:
@@ -70,6 +85,8 @@ func reset_run() -> void:
 	boss_cleared = false
 	current_area = ""
 	previous_area = ""
+	hp_blessings = {}
+	hoard_blessing = false
 
 
 ## --- run lifecycle -----------------------------------------------------------
@@ -143,6 +160,7 @@ func finish_battle(tree: SceneTree, party: Array[BaseCombatant], victory: bool) 
 	snapshot_party(party)
 	if victory and pending_foe_id != "":
 		cleared_foes.append(pending_foe_id)
+		_grant_foe_rewards(pending_foe_id)
 	pending_foe_id = ""
 	if not victory:
 		apply_retry_penalty()
@@ -164,7 +182,27 @@ func snapshot_party(party: Array[BaseCombatant]) -> void:
 		party_meters[member.display_name]["burden"] = member.meters.burden()
 
 
+func _grant_foe_rewards(foe_id: String) -> void:
+	if not FOE_REWARDS.has(foe_id):
+		return
+	var reward: Dictionary = FOE_REWARDS[foe_id]
+	var loot: Dictionary = reward.get("items", {})
+	for item_id: String in loot:
+		add_item(item_id, int(loot[item_id]))
+	if reward.has("resolve"):
+		adjust_party_meter("resolve", float(reward["resolve"]))
+	if reward.has("burden"):
+		adjust_party_meter("burden", float(reward["burden"]))
+	if bool(reward.get("hoard", false)):
+		hoard_blessing = true
+
+
 func apply_to_member(member: BaseCombatant) -> void:
+	if hp_blessings.has(member.display_name):
+		member.stats.base_stats["hp"] = (
+			int(member.stats.base_stats.get("hp", 1)) + int(hp_blessings[member.display_name])
+		)
+		member.stats.heal(int(hp_blessings[member.display_name]))
 	if not party_meters.has(member.display_name):
 		return
 	var saved: Dictionary = party_meters[member.display_name]

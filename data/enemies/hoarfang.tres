@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+name = "Hoarfang the Glutton"
+class_type = "Beast"
+element = "Ice"
+base_stats = {"hp": 700, "aether": 80, "power": 36, "focus": 30, "guard": 30, "ward": 30, "speed": 21, "accuracy": 91, "evasion": 5, "crit": 7}
+affinities = {}
+ability_ids = Array[String](["attack_basic", "gluttonous_bite", "hoard_slam", "glacial_breath"])
+ferocity = 1.22
+stability = 0.5
+ai_profile = "priority"

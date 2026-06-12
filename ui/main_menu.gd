@@ -281,6 +281,7 @@ func _build_playtest_panel() -> void:
 	for spot: Array in [
 		["Town — Aethertown", "res://world/town.tscn"],
 		["Forest — Verdant Pass", "res://world/forest.tscn"],
+		["Deep Woods — Selinoran", "res://world/deep_woods.tscn"],
 		["Outside — Crystal Fields", "res://world/outside.tscn"],
 		["Dungeon — Crystal Site", "res://world/dungeon.tscn"],
 	]:

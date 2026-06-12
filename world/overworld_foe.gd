@@ -5,8 +5,8 @@ extends Area2D
 ## and walks home. Touching the player starts its battle roster. Defeated
 ## foes stay gone for the run (WorldState.cleared_foes).
 
-const PATROL_SPEED: float = 70.0
-const CHASE_SPEED: float = 150.0
+const PATROL_SPEED: float = 52.0
+const CHASE_SPEED: float = 122.0
 const AGGRO_RADIUS: float = 185.0
 const LEASH_RADIUS: float = 360.0
 

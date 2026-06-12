@@ -109,8 +109,61 @@ static func enemy_paths_for(roster_id: String) -> Array[String]:
 				"res://data/enemies/frost_wisp.tres",
 				WOLF,
 			]
+		"gate_warden":
+			return ["res://data/enemies/gate_warden.tres"]
+		"pass_horror":
+			return ["res://data/enemies/pass_horror.tres", WOLF]
+		"deep_predator":
+			return ["res://data/enemies/selinoran_predator.tres"]
+		"hoarfang":
+			return [
+				"res://data/enemies/hoarfang.tres",
+				"res://data/enemies/crystal_wolf.tres",
+				"res://data/enemies/crystal_wolf.tres",
+			]
 		_:
 			return [WOLF, WOLF, STAG]  # classic wolfpack
+
+
+## The forced encounters open with WORDS: the enemy speaks (camera on them),
+## the blow lands on the heart (meter strikes on a chosen half of the party,
+## a different pairing each gate), and the struck pilgrims answer — all at
+## the top of the battle, after load. Then the fight begins, already bent.
+const INTROS: Dictionary = {
+	"gate_warden": {
+		"enemy_lines": [
+			"Warden: 'The road past this gate eats pilgrims whole.'",
+			"Warden: 'Show me your nerve — or stay home and live.'",
+		],
+		"strikes": [{"names": ["Bastil", "Cavene"], "resolve": -10.0}],
+		"responses": {"Bastil": "Steady...", "Cavene": "A test? Fine. Mark us."},
+	},
+	"pass_horror": {
+		"enemy_lines": [
+			"The thicket knots itself into limbs. Something old unfolds.",
+			"Horror: 'TURN. BACK. The deep woods are not yours to cross.'",
+		],
+		"strikes": [{"names": ["Jecht", "Mati"], "burden": 15.0, "resolve": -10.0}],
+		"responses": {"Jecht": "It's... in my head—", "Mati": "Hold my hand, brother. We go THROUGH."},
+	},
+	"deep_predator": {
+		"enemy_lines": [
+			"Two eyes open in the rain. They have been open for a long time.",
+			"Predator: 'I let you walk this far. Fattened on hope.'",
+			"Predator: 'You cannot pass. I will feast on your fear first.'",
+		],
+		"strikes": [{"names": ["Bastil", "Mati"], "burden": 20.0, "resolve": -14.0}],
+		"responses": {"Bastil": "My shield arm... it's shaking.", "Mati": "Then shake. And STAND."},
+	},
+	"hoarfang": {
+		"enemy_lines": [
+			"Hoarfang: 'Mine. The bottles, the bones, the warm little hearts.'",
+			"Hoarfang: 'Add yours to the pile.'",
+		],
+		"strikes": [{"names": ["Cavene", "Jecht"], "resolve": -8.0}],
+		"responses": {"Cavene": "Greed. Now THAT I know how to judge.", "Jecht": "Take the hoard. Take everything."},
+	},
+}
 
 
 func _ready() -> void:
@@ -208,6 +261,8 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	if boss_controller != null:
 		encounter.register_boss_controller(boss_controller)
 		boss_controller.phase_changed.connect(_on_boss_phase_changed)
+	if INTROS.has(roster) and presenter != null and not presenter.instant:
+		await _play_intro(INTROS[roster])
 	var music: Node = get_node_or_null("/root/MusicManager")
 	if music != null:
 		if roster == "boss":
@@ -472,10 +527,78 @@ func _spawn_enemies() -> void:
 		_add_token(enemy, ENEMY_COLOR, 1.3, "left")  # bigger, facing the party
 
 
+## The intro stage-play: enemy speaks, hearts take the hit, pilgrims answer.
+func _play_intro(intro: Dictionary) -> void:
+	var foe_center: Vector2 = Vector2(950, 420)
+	if not enemies.is_empty():
+		foe_center = enemies[0].position
+	if camera != null:
+		camera.focus_on(foe_center, true)
+	for line: String in intro.get("enemy_lines", []):
+		combat_log.append_line(line)
+		_intro_caption(line, Color(1.0, 0.72, 0.66))
+		_sfx("shock")
+		await get_tree().create_timer(2.2, true, false, true).timeout
+	# The blow before the blow: meters struck, and SHOWN.
+	for strike: Dictionary in intro.get("strikes", []):
+		for member: BaseCombatant in party:
+			if member.display_name not in strike.get("names", []):
+				continue
+			if camera != null:
+				camera.pan_to(member.position, 0.4)
+			var report: Array[String] = []
+			if strike.has("burden"):
+				member.meters.add(MetersComponent.BURDEN, float(strike["burden"]))
+				report.append("BURDEN +%d" % int(float(strike["burden"])))
+			if strike.has("resolve"):
+				member.meters.add(MetersComponent.RESOLVE, float(strike["resolve"]))
+				report.append("RESOLVE %d" % int(float(strike["resolve"])))
+			BattleFX.text_pop(
+				stage, member.position, " · ".join(report), Color(0.95, 0.45, 0.4)
+			)
+			combat_log.append_line("%s — %s" % [member.display_name, " · ".join(report)])
+			_sfx("status")
+			await get_tree().create_timer(1.1, true, false, true).timeout
+			var answer: String = String(intro.get("responses", {}).get(member.display_name, ""))
+			if answer != "":
+				BattleFX.text_pop(stage, member.position + Vector2(0, -46), answer, Color(0.95, 0.93, 0.8))
+				_intro_caption("%s: '%s'" % [member.display_name, answer], Color(0.85, 0.9, 1.0))
+				await get_tree().create_timer(1.7, true, false, true).timeout
+	if camera != null:
+		camera.release()
+	await get_tree().create_timer(0.5, true, false, true).timeout
+
+
+## A big readable caption strip for intro lines (bottom-center, UI layer).
+func _intro_caption(text: String, tint: Color) -> void:
+	var caption: Label = Label.new()
+	caption.text = text
+	caption.add_theme_font_size_override("font_size", 21)
+	caption.modulate = Color(tint, 0.0)
+	caption.position = Vector2(0, 470)
+	caption.size = Vector2(1280, 40)
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_layer.add_child(caption)
+	var fade: Tween = caption.create_tween()
+	fade.tween_property(caption, "modulate:a", 1.0, 0.25)
+	fade.tween_interval(1.9)
+	fade.tween_property(caption, "modulate:a", 0.0, 0.5)
+	fade.tween_callback(caption.queue_free)
+
+
 func _spawn_boss() -> void:
 	var data: EnemyData = load(BOSS_PATH)
 	var boss: BaseCombatant = BaseCombatant.from_enemy(data)
 	boss.position = Vector2(950, 410)
+	# Hoarfang's hoard taken: the Shepherd drinks the same deep water.
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null and bool(world.get("hoard_blessing")):
+		boss.stats.base_stats["hp"] = int(int(boss.stats.base_stats.get("hp", 1)) * 1.35)
+		boss.stats.base_stats["power"] = int(int(boss.stats.base_stats.get("power", 1)) * 1.2)
+		boss.stats.heal(99999)
+		combat_log.append_line.call_deferred(
+			"The Shepherd has fed on the hoard's loss. It is MORE."
+		)
 	stage.add_child(boss)
 	enemies.append(boss)
 	_add_token(boss, BOSS_COLOR, 1.7)
@@ -644,7 +767,22 @@ func _on_player_turn(actor: BaseCombatant) -> void:
 	_place_menu_above_hud.call_deferred(action_menu)
 
 
+## Keepsakes answer one hand only. Pure rule, unit-tested.
+static func keepsake_blocked(ability: AbilityData, actor: BaseCombatant) -> bool:
+	return ability.owner_only != "" and ability.owner_only != actor.display_name
+
+
 func _on_ability_chosen(ability: AbilityData) -> void:
+	if keepsake_blocked(ability, encounter.current_actor):
+		# The item refuses: error sound, a quiet line — and the turn is KEPT.
+		_sfx("miss")
+		combat_log.append_line(
+			"%s holds the %s... it stays cold. (Not theirs.)"
+			% [encounter.current_actor.display_name, ability.display_name]
+		)
+		action_menu.open_for(encounter.current_actor)
+		_place_menu_above_hud.call_deferred(action_menu)
+		return
 	_sfx("click")
 	pending_ability = ability
 	action_menu.close()
@@ -715,7 +853,22 @@ func _on_action_feedback(
 		var world_items: Node = get_node_or_null("/root/WorldState")
 		if world_items != null:
 			world_items.consume_item(ability.id)
+			# Relic blessings persist for the whole run.
+			if ability.permanent_hp > 0:
+				world_items.hp_blessings[actor.display_name] = (
+					int(world_items.hp_blessings.get(actor.display_name, 0)) + ability.permanent_hp
+				)
 		_sfx("heal")
+		# The keepsake answers its owner — out loud.
+		if ability.use_line != "":
+			BattleFX.text_pop(
+				stage, actor.position + Vector2(0, -52), ability.use_line, Color(1.0, 0.9, 0.55)
+			)
+			combat_log.append_line("%s: '%s'" % [actor.display_name, ability.use_line])
+			if ability.permanent_hp > 0:
+				BattleFX.text_pop(
+					stage, actor.position, "MAX HP +%d" % ability.permanent_hp, Color(0.5, 1.0, 0.6)
+				)
 	if ability.ability_type == "echo":
 		_sfx(ability.id)
 		_sfx("echo")
@@ -809,7 +962,23 @@ func _on_battle_ended(victory: bool) -> void:
 			"resolve": member.meters.resolve(),
 			"darkness": member.meters.darkness() if member.is_heir() else 0.0,
 		}
+	# A CLEAN victory steels the heart: nobody down, wounds shallow.
+	if victory and _was_clean_victory():
+		for member: BaseCombatant in party:
+			member.meters.add(MetersComponent.RESOLVE, 4.0)
+			member.meters.add(MetersComponent.BURDEN, -3.0)
+		combat_log.append_line("Fought clean — Resolve +4, Burden -3 across the line.")
 	_show_end_overlay(victory)
+
+
+## True when everyone stands and the party kept most of its blood.
+func _was_clean_victory() -> bool:
+	var total_ratio: float = 0.0
+	for member: BaseCombatant in party:
+		if not member.is_alive():
+			return false
+		total_ratio += float(member.stats.current_hp) / float(member.stats.max_hp())
+	return party.size() > 0 and total_ratio / float(party.size()) >= 0.6
 
 
 func _show_end_overlay(victory: bool) -> void:

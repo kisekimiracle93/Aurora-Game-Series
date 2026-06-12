@@ -18,6 +18,7 @@ const SHEETS: Array[Dictionary] = [
 const MAP_CHAIN: Array[Dictionary] = [
 	{"scene": "res://world/town.tscn", "label": "AETHERTOWN", "note": "castle · save"},
 	{"scene": "res://world/forest.tscn", "label": "VERDANT PASS", "note": "forest · save"},
+	{"scene": "res://world/deep_woods.tscn", "label": "SELINORAN DEEP", "note": "rain · predator"},
 	{"scene": "res://world/outside.tscn", "label": "CRYSTAL FIELDS", "note": "ice · save"},
 	{"scene": "res://world/dungeon.tscn", "label": "CRYSTAL SITE II", "note": "boss"},
 ]
@@ -174,6 +175,12 @@ func _build_menu_page() -> void:
 		numbers.add_theme_font_size_override("font_size", 11)
 		numbers.modulate = Color(0.6, 0.6, 0.62)
 		line.add_child(numbers)
+		# Who they ARE, in one breath (the owner asked the menu to say it).
+		var who_blurb: Label = Label.new()
+		who_blurb.text = "      " + String(sheet["blurb"])
+		who_blurb.add_theme_font_size_override("font_size", 10)
+		who_blurb.modulate = Color(0.52, 0.52, 0.56)
+		stack.add_child(who_blurb)
 	stack.add_child(HSeparator.new())
 	var footnote: Label = Label.new()
 	footnote.text = "(WIP reading: courage carries, conviction steadies, grief and the dark drag.)"
@@ -215,8 +222,8 @@ func _build_map_page(world: Node) -> void:
 	for i: int in range(MAP_CHAIN.size()):
 		var stop: Dictionary = MAP_CHAIN[i]
 		var box: PanelContainer = PanelContainer.new()
-		box.position = Vector2(190 + i * 240, 240)
-		box.custom_minimum_size = Vector2(190, 130)
+		box.position = Vector2(165 + i * 196, 240)
+		box.custom_minimum_size = Vector2(160, 130)
 		_map_root.add_child(box)
 		var stack: VBoxContainer = VBoxContainer.new()
 		box.add_child(stack)
@@ -249,8 +256,8 @@ func _build_map_page(world: Node) -> void:
 		if i < MAP_CHAIN.size() - 1:
 			var road: ColorRect = ColorRect.new()
 			road.color = Color(0.7, 0.62, 0.5, 0.8)
-			road.position = Vector2(190 + i * 240 + 190, 300)
-			road.size = Vector2(50, 8)
+			road.position = Vector2(165 + i * 196 + 160, 300)
+			road.size = Vector2(36, 8)
 			_map_root.add_child(road)
 	# Branch scribbles: the parts a surveyor would pencil in.
 	var scribble: Label = Label.new()

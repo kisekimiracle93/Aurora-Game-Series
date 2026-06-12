@@ -85,6 +85,19 @@ static func _resolve_on_target(
 		target.meters.add(MetersComponent.RESOLVE, float(ability.resolve_gain))
 		result["resolve_gain"] = ability.resolve_gain
 
+	# Keepsakes: the heart answers (meter shifts on whoever holds it).
+	if not ability.meter_effects.is_empty():
+		for meter_name: String in ability.meter_effects:
+			target.meters.add(StringName(meter_name), float(ability.meter_effects[meter_name]))
+		result["meters_touched"] = true
+	# Relics: a permanent widening of the vessel, filled as it grows.
+	if ability.permanent_hp > 0:
+		target.stats.base_stats["hp"] = (
+			int(target.stats.base_stats.get("hp", 1)) + ability.permanent_hp
+		)
+		target.stats.heal(ability.permanent_hp)
+		result["permanent_hp"] = ability.permanent_hp
+
 	return result
 
 

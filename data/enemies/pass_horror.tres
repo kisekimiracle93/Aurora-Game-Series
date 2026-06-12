@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemy_data.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+name = "Thicket Horror"
+class_type = "Beast"
+element = "Neutral"
+base_stats = {"hp": 430, "aether": 60, "power": 34, "focus": 26, "guard": 24, "ward": 26, "speed": 22, "accuracy": 90, "evasion": 6, "crit": 6}
+affinities = {}
+ability_ids = Array[String](["attack_basic", "thicket_grasp", "rending_howl"])
+ferocity = 1.18
+stability = 0.4
+ai_profile = "priority"

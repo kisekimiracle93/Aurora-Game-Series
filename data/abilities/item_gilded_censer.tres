@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/ability_data.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "item_gilded_censer"
+display_name = "Gilded Censer"
+ability_type = "support"
+damage_type = "none"
+element = "Neutral"
+coeff = 0.0
+ct_cost = 700
+targeting = "self"
+is_item = true
+description = "A censer of judged gold. It swings only for an inquisitor's wrist."
+owner_only = "Cavene"
+use_line = "Let the smoke testify."
+meter_effects = {}
+permanent_hp = 40

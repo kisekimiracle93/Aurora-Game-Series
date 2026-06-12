@@ -26,3 +26,14 @@ extends Resource
 @export var is_item: bool = false
 @export var flat_heal: int = 0
 @export var flat_aether: int = 0
+## Menu text: what the player reads. For keepsakes, the CLUE lives here.
+@export_multiline var description: String = ""
+## Keepsakes: usable by ONE pilgrim only (display name). Wrong hands: the
+## item refuses (error sound, turn kept). The game never says whose is whose.
+@export var owner_only: String = ""
+## What the owner says (a battle bubble) the moment it answers them.
+@export_multiline var use_line: String = ""
+## Meter shifts applied to the target on use: {"resolve": 20, "burden": -10}.
+@export var meter_effects: Dictionary = {}
+## Relics: a permanent max-HP blessing (persists for the whole run).
+@export var permanent_hp: int = 0

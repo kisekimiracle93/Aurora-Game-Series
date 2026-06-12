@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/ability_data.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "item_childs_letter"
+display_name = "Child's Letter"
+ability_type = "support"
+damage_type = "none"
+element = "Neutral"
+coeff = 0.0
+ct_cost = 700
+targeting = "self"
+is_item = true
+description = "Crayon on rough paper: 'come home safe, shield-man.'"
+owner_only = "Bastil"
+use_line = "I'm coming home, little one. After this."
+meter_effects = {"duty": 15, "resolve": 12}
+permanent_hp = 0
