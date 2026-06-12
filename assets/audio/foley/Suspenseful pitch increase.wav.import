@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://clyonjivknf2l"
+path="res://.godot/imported/Suspenseful pitch increase.wav-b293d5bba6ac6361f98e23d50232f55e.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Suspenseful pitch increase.wav"
+dest_files=["res://.godot/imported/Suspenseful pitch increase.wav-b293d5bba6ac6361f98e23d50232f55e.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bc2u0ryocfmon"
+path="res://.godot/imported/Zipper up.wav-52d86ee3bbb47face3612ae6b1eae884.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Zipper up.wav"
+dest_files=["res://.godot/imported/Zipper up.wav-52d86ee3bbb47face3612ae6b1eae884.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

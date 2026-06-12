@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cex0eigo5gavk"
+path="res://.godot/imported/Zipper bag.wav-d75a47968f5def5792160899dcc0831a.sample"
+
+[deps]
+
+source_file="res://assets/packs2d/Character/Zipper bag.wav"
+dest_files=["res://.godot/imported/Zipper bag.wav-d75a47968f5def5792160899dcc0831a.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

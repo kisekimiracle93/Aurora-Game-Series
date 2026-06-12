@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://dxdoqc1ark5bt"
+path="res://.godot/imported/floor_dirt_large.obj-c3d48b211e860328f82f9dd9325bc161.mesh"
+
+[deps]
+
+files=["res://.godot/imported/floor_dirt_large.obj-c3d48b211e860328f82f9dd9325bc161.mesh"]
+
+source_file="res://assets/kits3d/nature/floor_dirt_large.obj"
+dest_files=["res://.godot/imported/floor_dirt_large.obj-c3d48b211e860328f82f9dd9325bc161.mesh", "res://.godot/imported/floor_dirt_large.obj-c3d48b211e860328f82f9dd9325bc161.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

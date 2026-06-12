@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://oblh06pyrxag"
+path="res://.godot/imported/Child laugh_7.wav-5051a798ed78e9716b25cfc7542335e0.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Child laugh_7.wav"
+dest_files=["res://.godot/imported/Child laugh_7.wav-5051a798ed78e9716b25cfc7542335e0.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

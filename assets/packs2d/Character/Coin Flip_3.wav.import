@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://qyqv2ahot5lv"
+path="res://.godot/imported/Coin Flip_3.wav-28d0d268ccc276adf43deecc455a81f4.sample"
+
+[deps]
+
+source_file="res://assets/packs2d/Character/Coin Flip_3.wav"
+dest_files=["res://.godot/imported/Coin Flip_3.wav-28d0d268ccc276adf43deecc455a81f4.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

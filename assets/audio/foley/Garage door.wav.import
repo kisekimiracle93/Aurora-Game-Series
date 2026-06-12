@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://wy1fwqfbdpir"
+path="res://.godot/imported/Garage door.wav-1aca8275a12229afa5edc3b2ec7a1dbb.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Garage door.wav"
+dest_files=["res://.godot/imported/Garage door.wav-1aca8275a12229afa5edc3b2ec7a1dbb.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

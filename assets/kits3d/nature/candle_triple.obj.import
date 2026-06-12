@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bfknas1t3dj88"
+path="res://.godot/imported/candle_triple.obj-d768969eac505ba740ffd124047e52ef.mesh"
+
+[deps]
+
+files=["res://.godot/imported/candle_triple.obj-d768969eac505ba740ffd124047e52ef.mesh"]
+
+source_file="res://assets/kits3d/nature/candle_triple.obj"
+dest_files=["res://.godot/imported/candle_triple.obj-d768969eac505ba740ffd124047e52ef.mesh", "res://.godot/imported/candle_triple.obj-d768969eac505ba740ffd124047e52ef.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

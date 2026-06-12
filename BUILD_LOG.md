@@ -1141,3 +1141,55 @@ goodbyes and opens after, talking emits the farewell signal.
 
 THE VERTICAL SLICE IS COMPLETE: M0–M7, plus every owner-directed pass
 (art, 2D-HD, cinematics, depth loop, Selenora's voice) on top.
+
+---
+
+## HD-2D pass I (owner-directed): the third dimension arrives
+
+Owner uploaded their collection to the repo (1,311 files: the KayKit
+dungeon kit in FBX, Quaternius bushes, 40MB of character animation rigs,
+six pixel enemy packs — demons, orcs, bats, mushrooms, slimes — and a
+foley library) and greenlit the Octopath-style migration: 3D world, 2D
+billboarded sprites. Network only allowed GitHub, which was enough:
+pulled the CC0 KayKit Medieval set (castle/church/homes/tavern/market/
+windmill/well/towers/bridges) and Quaternius stylized nature
+(pines/birches/rocks) to cover the town architecture the upload lacked.
+
+- **Assets organized**: loose root files sorted into assets/kits3d/
+  {dungeon,nature,medieval,anims}, assets/packs2d/ (the pixel packs),
+  assets/audio/foley/. Atlases duplicated where FBX expect them. All
+  300+ models import clean (OBJ→Mesh, FBX→PackedScene via ufbx).
+- **world3d/ module** (the new engine layer):
+  - `HDAssets`: kit loaders that force each kit's atlas as a vertex-color
+    StandardMaterial — colors survive any import quirk. 64px = 1 unit
+    mapping (`to3d`) so every 2D coordinate ports straight across.
+  - `PlayerAvatar3D`: CharacterBody3D + AnimatedSprite3D running the SAME
+    SpriteFrames as the 2D walkers — Y-billboard, alpha-cut, shaded, real
+    shadows. Same controls (WASD/G/T/Tab/Z), same facing logic on the
+    ground plane. The diorama rig rides on a -38° arm: Camera3D fov 30
+    with CameraAttributesPractical near+far DoF; Z racks the lens.
+  - `HDBase`: the area scaffold — ProceduralSky environment with SSAO,
+    glow, volumetric fog, filmic tonemap, saturation lift (full stack on
+    Forward+; project switched to forward_plus with a mobile override),
+    shadow-casting sun, textured ground/road/water planes with collision,
+    kit props with footprints, pixel-billboard NPCs with Label3D chatter,
+    torches with flickering OmniLights, the save-crystal prism, portals
+    back to the 2D scenes.
+  - `hd_selenora.tscn`: the pilot — Selenora's landmark layout rebuilt in
+    true 3D (KayKit castle + flanking towers, church, tavern, homes,
+    market, windmill, lumbermill, well, bridge over the river), 46 real
+    trees ringing the map, market clutter from the dungeon kit, six
+    burning torches, the crystal, four chattering pixel villagers
+    (Tarnaie included), and an east-road portal home. Main-menu jump-off
+    added.
+- 2D game untouched: all prior systems green.
+
+**Test status:** `216/216 passed (1732 asserts)`; pilot renders verified
+(billboarded villagers casting shadows on 3D ground, floating chatter,
+torch glow — GL fallback frame; Forward+ effects land on real hardware).
+New coverage (`test_hd2d_pilot.gd`): px→world mapping, all three kit
+loaders + soft-fail, pilot boots with player/camera/DoF/SSAO/fog/torches.
+
+NEXT (with owner feedback): tune camera framing + model scales from real
+play, convert remaining areas, move battles onto 3D stages, wire the new
+pixel enemy packs into encounters, and put the animation rigs to work.

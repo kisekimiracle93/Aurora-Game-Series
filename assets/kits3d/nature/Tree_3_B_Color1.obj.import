@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://beap08r7som2o"
+path="res://.godot/imported/Tree_3_B_Color1.obj-e45975c4824020d5d477ed0784ad42a4.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Tree_3_B_Color1.obj-e45975c4824020d5d477ed0784ad42a4.mesh"]
+
+source_file="res://assets/kits3d/nature/Tree_3_B_Color1.obj"
+dest_files=["res://.godot/imported/Tree_3_B_Color1.obj-e45975c4824020d5d477ed0784ad42a4.mesh", "res://.godot/imported/Tree_3_B_Color1.obj-e45975c4824020d5d477ed0784ad42a4.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

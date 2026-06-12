@@ -143,5 +143,6 @@ window/size/viewport_height=720
 
 [rendering]
 
-renderer/rendering_method="mobile"
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
 viewport/hdr_2d=true

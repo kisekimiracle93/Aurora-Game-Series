@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bge63fs2qux1c"
+path="res://.godot/imported/box_small_decorated.obj-caa131e176230e9d50ded5505102f71e.mesh"
+
+[deps]
+
+files=["res://.godot/imported/box_small_decorated.obj-caa131e176230e9d50ded5505102f71e.mesh"]
+
+source_file="res://assets/kits3d/nature/box_small_decorated.obj"
+dest_files=["res://.godot/imported/box_small_decorated.obj-caa131e176230e9d50ded5505102f71e.mesh", "res://.godot/imported/box_small_decorated.obj-caa131e176230e9d50ded5505102f71e.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://ccovcqeuehb4n"
+path="res://.godot/imported/Ghost chior.wav-345dd8384a5d56b2781002c2f2840faa.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Ghost chior.wav"
+dest_files=["res://.godot/imported/Ghost chior.wav-345dd8384a5d56b2781002c2f2840faa.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

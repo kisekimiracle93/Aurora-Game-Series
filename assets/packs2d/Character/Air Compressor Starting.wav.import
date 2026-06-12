@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://ls61tj1r54ee"
+path="res://.godot/imported/Air Compressor Starting.wav-ef3d3f5b5cb36468e2376aa2f9383285.sample"
+
+[deps]
+
+source_file="res://assets/packs2d/Character/Air Compressor Starting.wav"
+dest_files=["res://.godot/imported/Air Compressor Starting.wav-ef3d3f5b5cb36468e2376aa2f9383285.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

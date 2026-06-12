@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://b4q25wp7nutay"
+path="res://.godot/imported/Slow crank.wav-fc2c40074bbad002a496a6c5a108d468.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Slow crank.wav"
+dest_files=["res://.godot/imported/Slow crank.wav-fc2c40074bbad002a496a6c5a108d468.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://ds8tm2732j5cm"
+path="res://.godot/imported/Camera_taking picture_2.wav-584a318dbd9443e64563a6974f959e3c.sample"
+
+[deps]
+
+source_file="res://assets/audio/foley/Camera_taking picture_2.wav"
+dest_files=["res://.godot/imported/Camera_taking picture_2.wav-584a318dbd9443e64563a6974f959e3c.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
