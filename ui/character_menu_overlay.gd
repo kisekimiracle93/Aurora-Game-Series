@@ -11,12 +11,13 @@ const SHEETS: Array[Dictionary] = [
 	{"path": "res://data/characters/cavene.tres", "blurb": "Firebrand Inquisitor — truth, by flame."},
 	{"path": "res://data/characters/jecht.tres", "blurb": "Icebound Heir — power that eats its bearer."},
 	{"path": "res://data/characters/mati.tres", "blurb": "Icebound Heir — grace under the long snow."},
+	{"path": "res://data/characters/tarnaie.tres", "blurb": "Priestess of Selene — a borrowed name, a chosen gentleness."},
 	{"path": "res://data/characters/merc_lancer.tres", "blurb": "Church Lancer — paid spear, honest work."},
 ]
 
 ## The known world, west to east (scene path -> label).
 const MAP_CHAIN: Array[Dictionary] = [
-	{"scene": "res://world/town.tscn", "label": "AETHERTOWN", "note": "castle · save"},
+	{"scene": "res://world/town.tscn", "label": "SELENORA", "note": "castle · save"},
 	{"scene": "res://world/forest.tscn", "label": "VERDANT PASS", "note": "forest · save"},
 	{"scene": "res://world/deep_woods.tscn", "label": "SELINORAN DEEP", "note": "rain · predator"},
 	{"scene": "res://world/outside.tscn", "label": "CRYSTAL FIELDS", "note": "ice · save"},

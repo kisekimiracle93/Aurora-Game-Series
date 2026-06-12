@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/character_data.gd" id="1_char"]
+
+[resource]
+script = ExtResource("1_char")
+name = "Tarnaie"
+class_type = "Priestess of Selene"
+element = "Neutral"
+base_stats = {"hp": 280, "aether": 80, "power": 18, "focus": 38, "guard": 18, "ward": 32, "speed": 26, "accuracy": 93, "evasion": 9, "crit": 5}
+affinities = {}
+ability_ids = Array[String](["attack_basic", "hymn_of_snowfall", "rally_by_flame"])
+is_heir = false
+is_merc = false

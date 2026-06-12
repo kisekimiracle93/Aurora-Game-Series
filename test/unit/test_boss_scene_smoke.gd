@@ -22,7 +22,7 @@ func test_boss_scene_boots_with_controller_wired() -> void:
 	if encounter == null:
 		return
 	assert_eq(encounter.state, CombatEncounter.State.AWAITING_PLAYER)
-	assert_eq(encounter.party.size(), 5)
+	assert_eq(encounter.party.size(), 6)
 	assert_eq(encounter.enemies.size(), 1, "the Shepherd stands alone... at first")
 	assert_eq(encounter.enemies[0].display_name, "Frozen Shepherd")
 	var controller: FrozenShepherdController = battle.get("boss_controller")

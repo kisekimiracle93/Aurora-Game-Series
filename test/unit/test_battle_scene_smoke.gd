@@ -16,7 +16,7 @@ func test_battle_scene_boots_to_player_input() -> void:
 	if encounter == null:
 		return
 	assert_eq(encounter.state, CombatEncounter.State.AWAITING_PLAYER)
-	assert_eq(encounter.party.size(), 5)
+	assert_eq(encounter.party.size(), 6)
 	assert_eq(encounter.enemies.size(), 3)
 	assert_not_null(encounter.current_actor)
 	assert_true(encounter.current_actor.is_player_controlled)

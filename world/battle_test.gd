@@ -8,6 +8,7 @@ const PARTY_PATHS: Array[String] = [
 	"res://data/characters/cavene.tres",
 	"res://data/characters/jecht.tres",
 	"res://data/characters/mati.tres",
+	"res://data/characters/tarnaie.tres",
 	"res://data/characters/merc_lancer.tres",
 ]
 const ENEMY_PATHS: Array[String] = [
@@ -137,6 +138,11 @@ const INTROS: Dictionary = {
 		],
 		"strikes": [{"names": ["Bastil", "Cavene"], "resolve": -10.0}],
 		"responses": {"Bastil": "Steady...", "Cavene": "A test? Fine. Mark us."},
+		"after": [
+			["Cavene", "He tested whether you'd stop, lad. Not whether you'd swing."],
+			["Bastil", "Phi would have bet coin on me swinging."],
+			["Tarnaie", "Then he'd have lost a coin and kept a friend. Walk on."],
+		],
 	},
 	"pass_horror": {
 		"enemy_lines": [
@@ -145,6 +151,11 @@ const INTROS: Dictionary = {
 		],
 		"strikes": [{"names": ["Jecht", "Mati"], "burden": 15.0, "resolve": -10.0}],
 		"responses": {"Jecht": "It's... in my head—", "Mati": "Hold my hand, brother. We go THROUGH."},
+		"after": [
+			["Mati", "It knew our names. Things out here shouldn't know our names."],
+			["Jecht", "Everything past the wards knows the Heirs. That's the problem."],
+			["Cavene", "Walk. Dread feeds on standing still."],
+		],
 	},
 	"deep_predator": {
 		"enemy_lines": [
@@ -154,6 +165,11 @@ const INTROS: Dictionary = {
 		],
 		"strikes": [{"names": ["Bastil", "Mati"], "burden": 20.0, "resolve": -14.0}],
 		"responses": {"Bastil": "My shield arm... it's shaking.", "Mati": "Then shake. And STAND."},
+		"after": [
+			["Bastil", "It said it fattened us on hope."],
+			["Tarnaie", "Then hope weighed more than it guessed."],
+			["Cavene", "The fields are past that arch. Save the trembling for the snow."],
+		],
 	},
 	"hoarfang": {
 		"enemy_lines": [
@@ -162,6 +178,11 @@ const INTROS: Dictionary = {
 		],
 		"strikes": [{"names": ["Cavene", "Jecht"], "resolve": -8.0}],
 		"responses": {"Cavene": "Greed. Now THAT I know how to judge.", "Jecht": "Take the hoard. Take everything."},
+		"after": [
+			["Cavene", "We just rang a dinner bell at the Shepherd's door. Worth it?"],
+			["Jecht", "Ask me after."],
+			["Cavene", "That's exactly what worries me."],
+		],
 	},
 }
 
@@ -480,8 +501,8 @@ func _stage_prop(prop_name: String, pos: Vector2, prop_scale: float) -> void:
 ## FFX-style staggered ranks on the platform: melee-forward, casters back,
 ## merc in the rear — everyone with their feet on the ground band.
 const PARTY_SLOTS: Array[Vector2] = [
-	Vector2(330, 330), Vector2(282, 388), Vector2(330, 446),
-	Vector2(282, 504), Vector2(336, 548),
+	Vector2(330, 322), Vector2(280, 372), Vector2(330, 422),
+	Vector2(280, 472), Vector2(330, 520), Vector2(282, 556),
 ]
 const ENEMY_SLOTS: Array[Vector2] = [
 	Vector2(920, 340), Vector2(1010, 430), Vector2(920, 520),
@@ -1007,6 +1028,18 @@ func _show_end_overlay(victory: bool) -> void:
 		else "Retrying lowers everyone's Resolve by %d." % int(SaveSystem.RETRY_RESOLVE_PENALTY)
 	)
 	box.add_child(body)
+
+	# After the gates fall, the party reflects — the road talks back.
+	var spoken_roster: String = world_roster if world_roster != "" else roster
+	if victory and INTROS.has(spoken_roster) and INTROS[spoken_roster].has("after"):
+		box.add_child(HSeparator.new())
+		for line: Array in INTROS[spoken_roster]["after"]:
+			var reflection: Label = Label.new()
+			reflection.text = "%s — “%s”" % [String(line[0]), String(line[1])]
+			reflection.add_theme_font_size_override("font_size", 12)
+			reflection.modulate = Color(0.82, 0.85, 0.95)
+			reflection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(reflection)
 
 	if world_mode and world != null:
 		if victory:

@@ -21,7 +21,14 @@ func _ready() -> void:
 	add_child(_row)
 
 
+var _panel_width: float = 242.0
+
+
 func setup(party: Array[BaseCombatant]) -> void:
+	# Six pilgrims still fit one strip: shrink the panels to share the width.
+	if party.size() > 5:
+		_panel_width = floorf((1256.0 - float(party.size() - 1) * 6.0) / float(party.size()))
+		_row.add_theme_constant_override("separation", 6)
 	for member: BaseCombatant in party:
 		_panels[member] = _build_panel(member)
 		member.stats.hp_changed.connect(func(_o: int, _n: int) -> void: _refresh(member))
@@ -50,7 +57,7 @@ func set_active(actor: BaseCombatant) -> void:
 func _build_panel(member: BaseCombatant) -> Dictionary:
 	var controls: Dictionary = {}
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(242, 0)
+	panel.custom_minimum_size = Vector2(_panel_width, 0)
 	_row.add_child(panel)
 	controls["panel"] = panel
 

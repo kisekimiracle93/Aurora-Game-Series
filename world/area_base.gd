@@ -721,8 +721,10 @@ func add_chest(chest_id: String, pos: Vector2, loot: Dictionary) -> void:
 
 
 ## A villager who wanders between waypoints and tosses a one-liner when bumped.
+## `quips`: optional [[party_speaker, line], ...] — the party sometimes answers.
 func add_roamer(
-	roamer_name: String, waypoints: Array[Vector2], lines: Array[String], tint: Color = Color.WHITE
+	roamer_name: String, waypoints: Array[Vector2], lines: Array[String],
+	tint: Color = Color.WHITE, quips: Array = []
 ) -> Node2D:
 	var roamer: Node2D = Node2D.new()
 	roamer.position = waypoints[0]
@@ -763,7 +765,8 @@ func add_roamer(
 	roamer.add_child(zone)
 	var entry: Dictionary = {
 		"area": zone, "prompt": "Talk", "callback": func() -> void:
-			show_dialog([lines[randi() % lines.size()]] as Array[String]),
+			show_dialog([lines[randi() % lines.size()]] as Array[String])
+			maybe_quip(quips),
 	}
 	_interactables.append(entry)
 	zone.body_entered.connect(func(body: Node2D) -> void:
@@ -778,7 +781,75 @@ func add_roamer(
 	return roamer
 
 
-## --- living vignettes: bubble talk that plays out as you pass -------------------
+## --- the party's voice: quips that cross the bottom of the screen ----------------
+
+
+var _quip_label: Label
+var _quip_tween: Tween
+
+## Owner spec: party members "flash their opinions across the bottom, with
+## enough time to read." One line at a time; later quips replace earlier.
+func party_quip(speaker: String, line: String) -> void:
+	if _quip_label == null or not is_instance_valid(_quip_label):
+		_quip_label = Label.new()
+		_quip_label.add_theme_font_size_override("font_size", 15)
+		_quip_label.position = Vector2(0, 648)
+		_quip_label.size = Vector2(1280, 26)
+		_quip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_hud_layer.add_child(_quip_label)
+	if _quip_tween != null and _quip_tween.is_valid():
+		_quip_tween.kill()
+	_quip_label.text = "%s — “%s”" % [speaker, line]
+	_quip_label.modulate = Color(0.95, 0.92, 0.8, 0.0)
+	_quip_tween = create_tween()
+	_quip_tween.tween_property(_quip_label, "modulate:a", 1.0, 0.3)
+	_quip_tween.tween_interval(maxf(2.6, float(line.length()) * 0.055))
+	_quip_tween.tween_property(_quip_label, "modulate:a", 0.0, 0.6)
+
+
+## Sometimes the party answers the street. pool: [[speaker, line], ...]
+func maybe_quip(pool: Array, chance: float = 0.4) -> void:
+	if pool.is_empty() or randf() > chance:
+		return
+	var pick: Array = pool[randi() % pool.size()]
+	party_quip(String(pick[0]), String(pick[1]))
+
+
+## --- street souls: thinkers and callers ------------------------------------------
+
+
+## A thinker: approach and "watch quietly" — you read what they will not say.
+## Their thoughts arrive parenthesized, a window not a conversation.
+func add_thinker(
+	walker_name: String, pos: Vector2, tint: Color, thoughts: Array[String],
+	quips: Array = []
+) -> void:
+	var soul: Node2D = add_roamer(walker_name, [pos] as Array[Vector2],
+		[] as Array[String], tint)
+	var mark: Label = Label.new()
+	mark.text = "…"
+	mark.add_theme_font_size_override("font_size", 18)
+	mark.modulate = Color(0.7, 0.75, 0.85, 0.8)
+	mark.position = Vector2(-7, -58)
+	soul.add_child(mark)
+	var blink: Tween = mark.create_tween().set_loops()
+	blink.tween_property(mark, "modulate:a", 0.25, 1.1)
+	blink.tween_property(mark, "modulate:a", 0.8, 1.1)
+	add_interactable(pos, "Watch quietly", func() -> void:
+		var inner: Array[String] = []
+		inner.append("( " + thoughts[randi() % thoughts.size()] + " )")
+		show_dialog(inner)
+		maybe_quip(quips))
+
+
+## A caller: shouts/murmurs AT you, unprompted, when you pass close.
+func add_caller(
+	walker_name: String, pos: Vector2, tint: Color, calls: Array,
+	radius: float = 230.0
+) -> void:
+	var soul: Node2D = add_roamer(walker_name, [pos] as Array[Vector2],
+		[] as Array[String], tint)
+	add_vignette(pos, radius, [{"node": soul, "lines": calls}])
 
 
 ## speakers: [{"node": Node2D, "lines": Array}], cycling random mini-bubbles
@@ -992,7 +1063,8 @@ func _build_minimap() -> void:
 	head.add_theme_constant_override("separation", 8)
 	stack.add_child(head)
 	var face: TextureRect = TextureRect.new()
-	var art: Texture2D = AssetLibrary.texture("characters", "Bastil")
+	var lead: String = player.lead_name if player != null else "Bastil"
+	var art: Texture2D = AssetLibrary.texture("characters", lead)
 	if art != null:
 		face.texture = art
 		face.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1002,9 +1074,15 @@ func _build_minimap() -> void:
 	var names: VBoxContainer = VBoxContainer.new()
 	head.add_child(names)
 	var who: Label = Label.new()
-	who.text = "BASTIL"
+	who.text = lead.to_upper()
 	who.add_theme_font_size_override("font_size", 13)
 	names.add_child(who)
+	if player != null:
+		player.lead_changed.connect(func(new_lead: String) -> void:
+			who.text = new_lead.to_upper()
+			var new_art: Texture2D = AssetLibrary.texture("characters", new_lead)
+			if new_art != null:
+				face.texture = new_art)
 	var where: Label = Label.new()
 	where.text = area_name.split("—")[0].strip_edges()
 	where.add_theme_font_size_override("font_size", 10)

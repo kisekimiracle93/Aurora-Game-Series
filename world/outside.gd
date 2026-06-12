@@ -49,6 +49,26 @@ func _setup_area() -> void:
 	east.position = Vector2(2360, 590)
 	east.add_theme_font_size_override("font_size", 14)
 	add_child(east)
+	_build_wayfarers()
+
+
+## Even the ice has voices, if you stop walking long enough.
+func _build_wayfarers() -> void:
+	add_thinker("fur_trapper", Vector2(720, 800), Color(0.62, 0.58, 0.52), [
+		"Wolf sign everywhere, but thin wolves. Something bigger is eating their kills.",
+		"The Church buys every white pelt I bring. Never asks the price. Whose coin moves THAT freely?",
+	] as Array[String], [
+		["Jecht", "Something bigger. He doesn't know how right he is."],
+		["Cavene", "Thin wolves mean a fat something. Eyes open."],
+	])
+	add_roamer("shrine_keeper", [Vector2(2330, 980)] as Array[Vector2], [
+		"I keep the wayside shrine. Pilgrims left no offerings for twenty years. This month: flowers, bread, a child's shoe.",
+		"The crystal site hums at night now. Like a hymn with the words worn off. Your doing, I'm told. Selene hold you.",
+		"A woman in purple passed at dusk once. Didn't pray. COUNTED the candles. I still think about that.",
+	] as Array[String], Color(0.8, 0.82, 0.88), [
+		["Tarnaie", "Counting candles. That sounds like the doctrinal office at prayer."],
+		["Bastil", "A child's shoe for an offering. Selene, if you're quieter than the banners — hear that one."],
+	])
 
 
 func _prop(prop_name: String, pos: Vector2, prop_scale: float = 2.0, solid: bool = true) -> void:

@@ -56,6 +56,15 @@ func _setup_area() -> void:
 		{"item_snow_totem": 1, "item_hp_potion": 1}
 	)
 	_add_broken_cart(Vector2(470, 2290))
+	# One soul lives in here. On purpose. That should tell you everything.
+	add_thinker("deep_hermit", Vector2(520, 2700), Color(0.55, 0.6, 0.55), [
+		"The rain knows my name. It's the only one left that does.",
+		"Signs broke years back. Nobody from the Church came to mend them. Mind what THAT says, walker.",
+		"The thing at the arch lets me be. We have an understanding: I don't hope, it doesn't hunt.",
+	] as Array[String], [
+		["Mati", "He stopped hoping so it stopped hunting. Don't you dare learn that lesson, brother."],
+		["Cavene", "A man the Church forgot. The woods is full of its margins."],
+	])
 	# One pack, half-starved, mid-path. Otherwise: nothing human, nothing kind.
 	var world: Node = get_node_or_null("/root/WorldState")
 	if world == null or not world.cleared_foes.has("deep_lone_pack"):

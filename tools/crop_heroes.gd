@@ -20,6 +20,7 @@ func _init() -> void:
 		"jecht": Vector2i(2, 0),
 		"mati": Vector2i(3, 0),
 		"church_lancer": Vector2i(0, 1),
+		"tarnaie": Vector2i(3, 1),
 	}
 	for pick_name: String in picks:
 		var block: Vector2i = picks[pick_name]

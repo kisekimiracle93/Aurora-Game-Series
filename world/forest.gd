@@ -42,10 +42,11 @@ func _setup_area() -> void:
 	add_exit(Rect2(3160, 600, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 3460))
 	add_exit(Rect2(3160, 1320, 40, 200), "res://world/deep_woods.tscn", Vector2(900, 3460))
 	var west: Label = Label.new()
-	west.text = "< Aethertown"
+	west.text = "< Selenora"
 	west.position = Vector2(50, 850)
 	west.add_theme_font_size_override("font_size", 14)
 	add_child(west)
+	_build_travelers()
 	for east_label: Array in [["The Selinoran Deep >", Vector2(2880, 600)], ["The Selinoran Deep >", Vector2(2880, 1320)]]:
 		var sign_label: Label = Label.new()
 		sign_label.text = String(east_label[0])
@@ -54,6 +55,38 @@ func _setup_area() -> void:
 		add_child(sign_label)
 	_build_pass_gate()
 	add_grass_detail(340, 19)
+
+
+## Souls on the road: the pilgrimage isn't the only thing walking it.
+func _build_travelers() -> void:
+	var quips: Array = [
+		["Tarnaie", "The desert missions. Phi used to talk about the ocean the same way."],
+		["Bastil", "Kimahri. That was supposed to be us, once."],
+		["Cavene", "Everyone on this road is going TOWARD something. Mind the ones who aren't."],
+	]
+	var friar_lines: Array[String] = [
+		"A wandering friar, friend — bound for the Kimahri oasis missions, where the Light's never been preached.",
+		"They recruit missionaries again now the crystal sings. Strange season: more faith, fewer faithful.",
+		"You walk like Keep-trained folk. Blessing on you — and on whatever the Church isn't telling you.",
+	]
+	add_roamer("wandering_friar", [
+		Vector2(700, 1000), Vector2(1100, 1000),
+	] as Array[Vector2], friar_lines, Color(0.78, 0.72, 0.6), quips)
+	var refugee_mother: Node2D = add_roamer("refugee_mother", [Vector2(2550, 1000)] as Array[Vector2],
+		[] as Array[String], Color(0.66, 0.6, 0.55))
+	var refugee_child: Node2D = add_roamer("refugee_child", [Vector2(2590, 1020)] as Array[Vector2],
+		[] as Array[String], Color(0.75, 0.68, 0.6))
+	refugee_child.scale = Vector2(0.68, 0.68)
+	add_vignette(Vector2(2570, 1010), 300.0, [
+		{"node": refugee_mother, "lines": [
+			"Is the road to Selenora truly safe? They turned us from two parishes already.",
+			"We're from the border. There's nothing LEFT at the border.",
+			"They'll stamp us Transient at the gate. Let them. Stamps don't keep you warm, but walls do.",
+		]},
+		{"node": refugee_child, "lines": [
+			"Mama, is that an Aetherion?", "I saw the monster's eyes in the field. Lamp-oil eyes.",
+		]},
+	])
 
 
 ## The second forced encounter: something in the thicket owns both east

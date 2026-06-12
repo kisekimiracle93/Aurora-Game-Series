@@ -11,6 +11,7 @@ const PICKS: Dictionary = {
 	"jecht": Vector2i(2, 0),
 	"mati": Vector2i(3, 0),
 	"church_lancer": Vector2i(0, 1),
+	"tarnaie": Vector2i(3, 1),
 	"roadside_bandit": Vector2i(1, 1),
 	"bandit_cutthroat": Vector2i(2, 1),
 }

@@ -118,7 +118,7 @@ func test_world_battle_uses_world_meters_and_respects_merc_flag() -> void:
 	assert_not_null(encounter)
 	if encounter == null:
 		return
-	assert_eq(encounter.party.size(), 4, "no Lancer without hiring him")
+	assert_eq(encounter.party.size(), 5, "no Lancer without hiring him")
 	assert_eq(encounter.enemies.size(), 2, "wolves_2 roster honored")
 	assert_almost_eq(encounter.party[0].meters.resolve(), 95.0, 0.001, "world meters applied")
 	assert_true(bool(battle.get("world_mode")))

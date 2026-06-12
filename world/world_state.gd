@@ -6,8 +6,18 @@ extends Node
 ## work without it (no pending battle = standalone mode).
 
 const TOWN_SCENE: String = "res://world/town.tscn"
-const PARTY_NAMES: Array[String] = ["Bastil", "Cavene", "Jecht", "Mati"]
+const PARTY_NAMES: Array[String] = ["Bastil", "Cavene", "Jecht", "Mati", "Tarnaie"]
 const MERC_NAME: String = "Church Lancer"
+
+## Who walks point in the world (the owner asked to roam as anyone).
+const AVATARS: Array[String] = ["Bastil", "Cavene", "Jecht", "Mati", "Tarnaie"]
+var avatar_name: String = "Bastil"
+
+
+func next_avatar() -> String:
+	var index: int = AVATARS.find(avatar_name)
+	avatar_name = AVATARS[(index + 1) % AVATARS.size()]
+	return avatar_name
 
 ## name -> {"resolve": float, "darkness": float}
 var party_meters: Dictionary = {}

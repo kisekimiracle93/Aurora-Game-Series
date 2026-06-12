@@ -5,14 +5,17 @@ extends CharacterBody2D
 ## — it earns its keep after dark). Emits walked distance for encounter rolls.
 
 signal stepped(distance: float)
+signal lead_changed(lead_name: String)
 
 const WALK_SPEED: float = 230.0
 const RUN_SPEED: float = 352.0
 
 var running: bool = false
 var lantern_lit: bool = false
+var lead_name: String = "Bastil"
 
 var _sprite_set: bool = false
+var _body_sprite: Node = null
 var _lantern: PointLight2D
 var _dust_timer: float = 0.0
 
@@ -24,22 +27,10 @@ func _ready() -> void:
 	shape.shape = rect
 	add_child(shape)
 
-	var art: Texture2D = AssetLibrary.texture("characters", "Bastil")
-	if WalkerSprite.attach(self, "Bastil", 2.0):
-		_sprite_set = true
-	elif art != null:
-		var sprite: Sprite2D = Sprite2D.new()
-		sprite.texture = art
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		sprite.scale = Vector2(2.0, 2.0)
-		add_child(sprite)
-		_sprite_set = true
-	else:
-		var body: ColorRect = ColorRect.new()
-		body.color = Color(0.35, 0.55, 0.9)
-		body.size = Vector2(28, 36)
-		body.position = Vector2(-14, -18)
-		add_child(body)
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null:
+		lead_name = String(world.get("avatar_name"))
+	_build_body()
 
 	var shadow: Node2D = Node2D.new()
 	shadow.position = Vector2(0, 26)
@@ -59,8 +50,55 @@ func _ready() -> void:
 	add_child(_lantern)
 
 
+## Whoever's named walks point: their body, their face on the minimap.
+func _build_body() -> void:
+	if _body_sprite != null and is_instance_valid(_body_sprite):
+		_body_sprite.queue_free()
+		_body_sprite = null
+	_sprite_set = false
+	if WalkerSprite.attach(self, lead_name, 2.0):
+		_body_sprite = get_children().back()
+		_sprite_set = true
+		return
+	var art: Texture2D = AssetLibrary.texture("characters", lead_name)
+	if art != null:
+		var sprite: Sprite2D = Sprite2D.new()
+		sprite.texture = art
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.scale = Vector2(2.0, 2.0)
+		add_child(sprite)
+		_body_sprite = sprite
+		_sprite_set = true
+	else:
+		var body: ColorRect = ColorRect.new()
+		body.color = Color(0.35, 0.55, 0.9)
+		body.size = Vector2(28, 36)
+		body.position = Vector2(-14, -18)
+		add_child(body)
+		_body_sprite = body
+
+
+func swap_lead() -> void:
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world == null:
+		return
+	lead_name = String(world.call("next_avatar"))
+	_build_body()
+	lead_changed.emit(lead_name)
+	var sfx: Node = get_node_or_null("/root/SfxManager")
+	if sfx != null:
+		sfx.play("click")
+	# A little step-in flourish so the change reads.
+	if _body_sprite is CanvasItem:
+		(_body_sprite as CanvasItem).modulate = Color(1.8, 1.8, 1.8)
+		var settle: Tween = create_tween()
+		settle.tween_property(_body_sprite, "modulate", Color.WHITE, 0.4)
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("run_toggle"):
+	if event.is_action_pressed("swap_lead"):
+		swap_lead()
+	elif event.is_action_pressed("run_toggle"):
 		running = not running
 	elif event.is_action_pressed("lantern"):
 		lantern_lit = not lantern_lit

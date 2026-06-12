@@ -1041,3 +1041,59 @@ rewards + Shepherd's price, the Deep boots (size/fireflies/torches/rain
 flag), rain+thunder voices, slowed patrols.
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal.
+
+---
+
+## Lore pass (owner-directed): Selenora finds its voice
+
+Owner delivered the source material — three chapters (Induction Day, Blood
+and Fire, Aftermath: secondary source) plus their own primary world notes
+(Tarnaie's hidden name, the pilgrimage cast, demons/monsters language, the
+Church's managed truth) — set AFTER the first crystal is restored. Built:
+
+- **Aethertown is now SELENORA** (area title, world map, road signs).
+- **Tarnaie joins the party** (6th member): Priestess of Selene, support
+  kit (hymn_of_snowfall, rally_by_flame), walk frames + front-facing still
+  cut from the sheet's unused block, meters tracked, condition-tracker
+  blurb ("a borrowed name, a chosen gentleness"), six battle ranks, HUD
+  panels auto-shrink to fit six.
+- **Swappable lead** ([Tab] / LB): roam as Bastil, Cavene, Jecht, Mati, or
+  Tarnaie — body swaps with a flash, minimap facecard + name follow.
+- **The street talks** (55+ souls in Selenora, 5 more on the road):
+  - 24 TALKERS: the Dimming veteran, the pilgrim mother who recognizes the
+    Holder of the Light, the dock skeptic who watched the Anchor arrest,
+    the doom-crier (the bells rang WRONG), the off-duty scribe ("the
+    cleaner the copy, the less it says"), the Transient beggar who clocks
+    Bastil as off-island stock, the catechism boy, the granary clerk
+    (53 orphans, West Laude/Harrowmere), honey-wine merchant, Miluni's
+    too-straight candles, the census taker (Approved or Deferred), the
+    aurora letter from the east, the Anchor's keeper who remembers three
+    acolytes in commonfolk robes, the Kimahri missionary lad...
+  - 8 THINKERS ("Watch quietly" reads their heads): the wall sentry, the
+    young widow, the tax clerk whose ledgers always balance, the mason
+    paid triple to forget the hole's shape, the stable boy whose horses
+    won't face north...
+  - 6 CALLERS who address you unprompted: the town crier (FIRST CRYSTAL
+    RESTORED!), "a boy in a borrowed cloak?", IT'S HIM!, "Light's holding
+    YOU, more like", "My brother asked questions once."
+  - 4 staged scenes: THE ARREST (white-and-gold knew his table), the fire
+    juggler ("joy and ruin wear the same color"), the catechism lesson
+    (a pupil asks who set the price), the washer line ("lye won't lift
+    what's in the grout").
+  - Road souls: the wandering friar bound for Kimahri, a refugee family,
+    the fields trapper + shrine keeper (a woman in purple COUNTED the
+    candles), the deep-woods hermit the Church forgot.
+- **The party answers**: a bottom-ticker quip line (speaker — "line"),
+  hold time scaled to length, fired by chance off lore-bearing talks.
+  Per-area pools; Tarnaie's lines guard her secret in plain sight.
+- **Post-gate reflections**: every forced-encounter victory overlay now
+  carries a 3-line party exchange (the road talks back).
+
+**Test status:** `206/206 passed (1688 asserts)`; boots clean; plaza render
+verified (a dozen souls on one screen). New coverage (`test_lore_pass.gd`):
+Tarnaie loads/walks/faces + six ranks, avatar cycle wraps all five + Tab
+registered, all four gates have real-pilgrim reflections, quip ticker
+content, Selenora rename + >45 interactables + thinker/talker prompts +
+map label + menu card.
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal.
