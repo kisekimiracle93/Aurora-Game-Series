@@ -10,6 +10,27 @@ var _current_track: String = ""
 var _player_a: AudioStreamPlayer
 var _player_b: AudioStreamPlayer
 var _active_is_a: bool = true
+## Once a crossfade settles, the live player breathes (a slow ±2dB swell) and
+## dips when the soundscape calls for a duck — the track feels alive, not flat.
+var _settled: AudioStreamPlayer = null
+var _lfo_time: float = 0.0
+var _duck_db: float = 0.0
+var _duck_hold_until: float = 0.0
+
+
+func _process(delta: float) -> void:
+	_lfo_time += delta
+	if _settled == null or not _settled.playing:
+		return
+	if Time.get_ticks_msec() / 1000.0 >= _duck_hold_until:
+		_duck_db = move_toward(_duck_db, 0.0, delta * 2.0)
+	_settled.volume_db = sin(_lfo_time * TAU / 42.0) * 2.2 + _duck_db
+
+
+## Momentarily bow the music (e.g. while a wolf howls in the dark).
+func duck(db: float, seconds: float) -> void:
+	_duck_db = db
+	_duck_hold_until = Time.get_ticks_msec() / 1000.0 + seconds
 
 
 func _ready() -> void:
@@ -30,6 +51,7 @@ func play_track(track_name: String) -> void:
 		return
 	var stream: AudioStream = AssetLibrary.music_stream(track_name)
 	_current_track = track_name
+	_settled = null
 	var fade_out: AudioStreamPlayer = _player_a if _active_is_a else _player_b
 	var fade_in: AudioStreamPlayer = _player_b if _active_is_a else _player_a
 	_active_is_a = not _active_is_a
@@ -45,6 +67,7 @@ func play_track(track_name: String) -> void:
 	fade_in.play()
 	var in_tween: Tween = create_tween()
 	in_tween.tween_property(fade_in, "volume_db", 0.0, FADE_SECONDS)
+	in_tween.tween_callback(func() -> void: _settled = fade_in)
 
 
 func stop_music() -> void:

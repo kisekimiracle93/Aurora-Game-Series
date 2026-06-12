@@ -54,7 +54,8 @@ func setup(
 
 
 func _ready() -> void:
-	z_index = 8
+	z_index = AreaBase.SORT_Z  # share the walkable plane so foes sort behind trees too
+	add_to_group("overworld_foe")  # red blips on the minimap
 	var shape: CollisionShape2D = CollisionShape2D.new()
 	var circle: CircleShape2D = CircleShape2D.new()
 	circle.radius = 24.0

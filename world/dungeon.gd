@@ -7,6 +7,7 @@ extends AreaBase
 func _init() -> void:
 	area_name = "AETHER CRYSTAL SITE II — the glacial deep"
 	music_track = "dungeon"
+	ambience_profile = "dungeon"
 	frost_level = 0.12
 	fog_level = 0.3
 
@@ -15,10 +16,39 @@ func _setup_area() -> void:
 	add_rect(Rect2(0, 0, 1280, 720), Color(0.08, 0.12, 0.16), -10)  # cavern dark
 	add_rect(Rect2(0, 280, 1280, 180), Color(0.13, 0.18, 0.23), -9)  # carved path
 
-	# Zone dividers: narrow doorways in two rock walls.
+	# Zone dividers: narrow doorways in two rock walls (real stone now).
+	var rock: Texture2D = AssetLibrary.texture("props", "rock_wall")
 	for wall_x: float in [420.0, 840.0]:
-		add_building(Rect2(wall_x, 0, 36, 280), Color(0.16, 0.2, 0.26))
-		add_building(Rect2(wall_x, 460, 36, 260), Color(0.16, 0.2, 0.26))
+		for wall_rect: Rect2 in [Rect2(wall_x, 0, 36, 280), Rect2(wall_x, 460, 36, 260)]:
+			if rock != null:
+				var face: TextureRect = TextureRect.new()
+				face.texture = rock
+				face.stretch_mode = TextureRect.STRETCH_TILE
+				face.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				face.position = wall_rect.position
+				face.size = wall_rect.size / 2.0
+				face.scale = Vector2(2.0, 2.0)
+				face.z_index = 2
+				face.modulate = Color(0.55, 0.62, 0.78)
+				add_child(face)
+				add_wall(wall_rect)
+				add_occluder(wall_rect)
+			else:
+				add_building(wall_rect, Color(0.16, 0.2, 0.26))
+	# Ice teeth at the cavern mouths; crystal clusters catch the light.
+	for icicle_pos: Vector2 in [Vector2(240, 120), Vector2(700, 150), Vector2(1100, 120)]:
+		add_prop("icicles", icicle_pos, 1.8, false)
+	for crystal_pos: Vector2 in [Vector2(160, 560), Vector2(760, 620), Vector2(1090, 560)]:
+		var cluster: Polygon2D = Polygon2D.new()
+		cluster.polygon = PackedVector2Array([
+			Vector2(0, -26), Vector2(10, -6), Vector2(22, -18), Vector2(28, 6),
+			Vector2(8, 10), Vector2(-12, 8), Vector2(-20, -8),
+		])
+		cluster.color = Color(0.55, 0.75, 1.0, 0.9)
+		cluster.position = crystal_pos
+		cluster.z_index = SORT_Z
+		add_child(cluster)
+		add_point_light(crystal_pos, Color(0.55, 0.8, 1.0), 1.1, 0.85)
 
 	var zone1: Label = Label.new()
 	zone1.text = "I. THE APPROACH"

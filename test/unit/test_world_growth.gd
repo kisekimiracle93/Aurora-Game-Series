@@ -146,7 +146,7 @@ func test_town_carries_castle_save_and_torches() -> void:
 	for node: Node in get_tree().get_nodes_in_group("torch_light"):
 		if area.is_ancestor_of(node):
 			torches += 1
-	assert_eq(torches, 5, "five town torches")
+	assert_eq(torches, 7, "seven town torches")
 
 
 func test_map_chain_scenes_exist_and_page_toggles() -> void:
@@ -157,12 +157,17 @@ func test_map_chain_scenes_exist_and_page_toggles() -> void:
 	var overlay: CharacterMenuOverlay = CharacterMenuOverlay.new()
 	add_child_autofree(overlay)
 	await get_tree().process_frame
-	assert_false(overlay._on_map_page, "opens on the party cards")
+	assert_false(overlay._on_map_page, "opens on the front menu page")
+	assert_true(overlay._menu_root.visible)
 	overlay._toggle_map()
 	assert_true(overlay._on_map_page)
 	assert_true(overlay._map_root.visible)
-	assert_false(overlay._cards_root.visible)
-	overlay._toggle_map()  # Esc/C on the map returns here, not out
+	assert_false(overlay._menu_root.visible)
+	overlay._toggle_map()  # Esc/C on the map returns to the menu, not out
 	assert_false(overlay._on_map_page)
-	assert_true(overlay._cards_root.visible)
+	assert_true(overlay._menu_root.visible)
 	assert_false(overlay._map_root.visible)
+	overlay._show_page("party")
+	assert_true(overlay._cards_root.visible, "party cards live one page deeper")
+	overlay._show_page("guide")
+	assert_true(overlay._guide_root.visible)

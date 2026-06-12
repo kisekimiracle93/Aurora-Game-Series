@@ -1,9 +1,10 @@
 class_name CharacterMenuOverlay
 extends CanvasLayer
-## The party ledger (C / gamepad Y in any world area): one stone card per
-## member — class, element, full stat block, and every meter with its band
-## and a plain-words description. Reads WorldState (world meters) + the
-## character .tres files. Closes with the same key, B, or Esc.
+## The in-game menu (C / gamepad Y in any world area). Opens on a front page:
+## the real entries (Party, World Map, Game Guide, Quit) beside the greyed
+## promises (Equipment, Sphere Grid, Options) — plus the party condition
+## tracker reading everyone's heart off the meters. Esc/C from any sub-page
+## returns HERE; Esc/C from here closes. [M] hops straight to the map.
 
 const SHEETS: Array[Dictionary] = [
 	{"path": "res://data/characters/bastil.tres", "blurb": "Firebound Warden — the shield that swears."},
@@ -21,53 +22,178 @@ const MAP_CHAIN: Array[Dictionary] = [
 	{"scene": "res://world/dungeon.tscn", "label": "CRYSTAL SITE II", "note": "boss"},
 ]
 
+var _menu_root: Control
 var _cards_root: Control
 var _map_root: Control
+var _guide_root: Control
+var _page: String = "menu"
+## Back-compat for the map toggle shortcut/tests.
 var _on_map_page: bool = false
+
+var _world: Node
 
 
 func _ready() -> void:
 	layer = 90
+	_world = get_node_or_null("/root/WorldState")
 	var dimmer: ColorRect = ColorRect.new()
-	dimmer.color = Color(0.02, 0.02, 0.04, 0.82)
+	dimmer.color = Color(0.02, 0.02, 0.04, 0.85)
 	dimmer.size = Vector2(1280, 720)
 	add_child(dimmer)
 
 	var title: Label = Label.new()
-	title.text = "T H E   P I L G R I M S"
+	title.text = "T H E   P I L G R I M A G E"
 	title.add_theme_font_size_override("font_size", 26)
-	title.position = Vector2(0, 24)
+	title.position = Vector2(0, 22)
 	title.size = Vector2(1280, 40)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(title)
 
 	var hint: Label = Label.new()
-	hint.text = "[C / Y / Esc]  close      ·      [M]  world map"
+	hint.text = "[C / Y / Esc]  back · close      ·      [M]  world map"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.modulate = Color(0.7, 0.7, 0.75)
-	hint.position = Vector2(0, 678)
+	hint.position = Vector2(0, 684)
 	hint.size = Vector2(1280, 24)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(hint)
 
+	_menu_root = Control.new()
+	add_child(_menu_root)
+	_build_menu_page()
+
 	_cards_root = Control.new()
+	_cards_root.visible = false
 	add_child(_cards_root)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.position = Vector2(20, 80)
 	row.add_theme_constant_override("separation", 8)
 	_cards_root.add_child(row)
-
-	var world: Node = get_node_or_null("/root/WorldState")
 	for sheet: Dictionary in SHEETS:
 		var data: CharacterData = load(String(sheet["path"]))
-		if data.is_merc and (world == null or not world.merc_hired):
+		if data.is_merc and (_world == null or not _world.merc_hired):
 			continue
-		row.add_child(_member_card(data, String(sheet["blurb"]), world))
+		row.add_child(_member_card(data, String(sheet["blurb"]), _world))
 
 	_map_root = Control.new()
 	_map_root.visible = false
 	add_child(_map_root)
-	_build_map_page(world)
+	_build_map_page(_world)
+
+	_guide_root = Control.new()
+	_guide_root.visible = false
+	add_child(_guide_root)
+	_build_guide_page()
+
+
+## --- the front page: entries + the condition tracker ---------------------------
+
+
+func _build_menu_page() -> void:
+	var entries: VBoxContainer = VBoxContainer.new()
+	entries.position = Vector2(120, 110)
+	entries.custom_minimum_size = Vector2(330, 0)
+	entries.add_theme_constant_override("separation", 8)
+	_menu_root.add_child(entries)
+	var first: Button = null
+	for entry: Array in [
+		["PARTY", true, func() -> void: _show_page("party")],
+		["WORLD MAP", true, func() -> void: _show_page("map")],
+		["GAME GUIDE — how to play", true, func() -> void: _show_page("guide")],
+		["EQUIPMENT", false, Callable()],
+		["SPHERE GRID", false, Callable()],
+		["OPTIONS", false, Callable()],
+		["QUIT TO TITLE", true, func() -> void:
+			get_tree().change_scene_to_file("res://world/main_menu.tscn")],
+	]:
+		var button: Button = Button.new()
+		button.text = String(entry[0])
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size", 17)
+		if bool(entry[1]):
+			button.pressed.connect(entry[2])
+			if first == null:
+				first = button
+		else:
+			button.disabled = true
+			button.text += "   (not yet built)"
+			button.modulate = Color(1, 1, 1, 0.45)
+		entries.add_child(button)
+	if first != null:
+		first.grab_focus()
+
+	# The condition tracker: the meters, read back as hearts.
+	var tracker: PanelContainer = PanelContainer.new()
+	tracker.position = Vector2(540, 110)
+	tracker.custom_minimum_size = Vector2(620, 0)
+	_menu_root.add_child(tracker)
+	var stack: VBoxContainer = VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 6)
+	tracker.add_child(stack)
+	var header: Label = Label.new()
+	header.text = "THE PARTY'S CONDITION"
+	header.add_theme_font_size_override("font_size", 15)
+	header.modulate = Color(0.85, 0.8, 0.68)
+	stack.add_child(header)
+	var meters_by_name: Dictionary = _world.party_meters if _world != null else {}
+	var party_line: Label = Label.new()
+	party_line.text = PartyMood.party_state(meters_by_name)
+	party_line.add_theme_font_size_override("font_size", 19)
+	party_line.modulate = Color(0.95, 0.93, 0.85)
+	stack.add_child(party_line)
+	stack.add_child(HSeparator.new())
+	for sheet: Dictionary in SHEETS:
+		var data: CharacterData = load(String(sheet["path"]))
+		if data.is_merc and (_world == null or not _world.merc_hired):
+			continue
+		if not meters_by_name.has(data.name):
+			continue
+		var meters: Dictionary = meters_by_name[data.name]
+		var state: String = PartyMood.member_state(
+			float(meters.get("resolve", 60.0)), float(meters.get("duty", 50.0)),
+			float(meters.get("burden", 0.0)), float(meters.get("darkness", 0.0)),
+			data.is_heir
+		)
+		var line: HBoxContainer = HBoxContainer.new()
+		line.add_theme_constant_override("separation", 8)
+		stack.add_child(line)
+		var dot: Label = Label.new()
+		dot.text = "●"
+		dot.modulate = PartyMood.state_color(state)
+		line.add_child(dot)
+		var who: Label = Label.new()
+		who.text = "%s is %s." % [data.name, state]
+		who.add_theme_font_size_override("font_size", 14)
+		line.add_child(who)
+		var numbers: Label = Label.new()
+		numbers.text = "   RES %d · DUTY %d · BUR %d%s" % [
+			int(float(meters.get("resolve", 60.0))), int(float(meters.get("duty", 50.0))),
+			int(float(meters.get("burden", 0.0))),
+			(" · DRK %d" % int(float(meters.get("darkness", 0.0)))) if data.is_heir else "",
+		]
+		numbers.add_theme_font_size_override("font_size", 11)
+		numbers.modulate = Color(0.6, 0.6, 0.62)
+		line.add_child(numbers)
+	stack.add_child(HSeparator.new())
+	var footnote: Label = Label.new()
+	footnote.text = "(WIP reading: courage carries, conviction steadies, grief and the dark drag.)"
+	footnote.add_theme_font_size_override("font_size", 10)
+	footnote.modulate = Color(0.55, 0.55, 0.58)
+	stack.add_child(footnote)
+
+
+func _show_page(page: String) -> void:
+	_page = page
+	_on_map_page = page == "map"
+	_menu_root.visible = page == "menu"
+	_cards_root.visible = page == "party"
+	_map_root.visible = page == "map"
+	_guide_root.visible = page == "guide"
+
+
+## [M] shortcut: hop to the map, or from the map back to the menu.
+func _toggle_map() -> void:
+	_show_page("menu" if _on_map_page else "map")
 
 
 ## --- the WIP world map (rough by design) ---------------------------------------
@@ -135,10 +261,62 @@ func _build_map_page(world: Node) -> void:
 	_map_root.add_child(scribble)
 
 
-func _toggle_map() -> void:
-	_on_map_page = not _on_map_page
-	_map_root.visible = _on_map_page
-	_cards_root.visible = not _on_map_page
+## --- the game guide ---------------------------------------------------------------
+
+
+const GUIDE_TEXT: String = """THE METERS — what the bars mean
+RESOLVE (white) — courage. High Resolve quickens the heart: better speed,
+  damage, and defense. It rises with victories and brave choices, falls with
+  defeats and retreats. Bands: Shaken · Wavering · Neutral · Bold · Valiant.
+DUTY (gold) — conviction. High Duty lands harder blows and makes Echoes
+  cheaper to call. Earned by keeping faith with the Church's charge.
+BURDEN (red) — grief carried. At 50+ it drags your turns (slower CT);
+  at 80+ it LOCKS the Echo entirely. Resting at a save crystal eases it.
+DARKNESS (violet, Heirs only) — power's price. Heir magic feeds it; it eats
+  max HP and accuracy, and at the brink it can force a collapse. Drains to
+  zero when you rest.
+ECHO (cyan) — the gauge fills as a fighter deals and takes blows. Full gauge
+  = one Echo: a memory made weapon.
+AETHER (blue) — spell fuel. Draughts and rest restore it.
+
+HOW TO PLAY — the world
+Move: WASD / arrows / left stick.    Interact: E / Enter / gamepad A.
+Menu: C / gamepad Y.    World map: M (inside the menu).
+Run: G toggles a sprint.    Lantern: T raises a warm light for the night.
+Save crystals: rest to drain Darkness, lift Resolve, ease Burden — and save.
+Foes patrol in the open: they chase only so far before returning. Pick your
+fights — or run past them.
+
+HOW TO PLAY — battle
+Turn order runs on speed (the timeline shows who's next). Arrows / stick
+navigate any menu; Enter / A confirms; Esc / B backs out.
+Magic, Skills, and Items live in folders; Attack, Guard, and Pray sit on top.
+Guard halves the hurt until your next turn. Pray does nothing — loudly.
+Debug hatches: ✓ win fight [Y] · ✕ end fight (no rewards, no penalty).
+
+THE ROAD
+Aethertown (castle · save) → the Verdant Pass (forest · save · branches) →
+the Crystal Fields (ice · save) → Aether Crystal Site II (the Shepherd).
+"""
+
+
+func _build_guide_page() -> void:
+	var frame: PanelContainer = PanelContainer.new()
+	frame.position = Vector2(140, 80)
+	frame.custom_minimum_size = Vector2(1000, 560)
+	_guide_root.add_child(frame)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(1000, 560)
+	frame.add_child(scroll)
+	var body: Label = Label.new()
+	body.text = GUIDE_TEXT
+	body.add_theme_font_size_override("font_size", 13)
+	body.custom_minimum_size = Vector2(960, 0)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	scroll.add_child(body)
+
+
+## --- the party cards ---------------------------------------------------------------
 
 
 func _member_card(data: CharacterData, blurb: String, world: Node) -> PanelContainer:
@@ -225,7 +403,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("char_menu") or event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		if _on_map_page:
-			_toggle_map()  # the map closes back to the character menu, not out
+		if _page != "menu":
+			_show_page("menu")  # sub-pages fall back to the menu, not out of it
 			return
 		queue_free()

@@ -95,9 +95,13 @@ static func synth_stream(sfx_name: String) -> AudioStreamWAV:
 		"cutpurse_slash", "warning_shot":
 			return _noise_burst(0.09, 0.45, 95.0)
 		"hover":
-			return _tone([[900.0, 0.030]], 0.18, "sine")
+			# Soft low tick — menu browsing shouldn't chirp at you.
+			return _tone([[290.0, 0.022]], 0.10, "sine")
 		"click":
-			return _tone([[1250.0, 0.040]], 0.25, "square")
+			# A woody "thock": low sine knock + the faintest felt tap.
+			return _mix([
+				_tone([[210.0, 0.045]], 0.16, "sine"), _noise_burst(0.018, 0.05, 160.0),
+			])
 		"hit":
 			return _noise_burst(0.10, 0.5, 90.0)
 		"crit":
@@ -125,7 +129,7 @@ static func synth_stream(sfx_name: String) -> AudioStreamWAV:
 		"burn", "bleed":
 			return _noise_burst(0.07, 0.25, 120.0)
 		_:
-			return _tone([[800.0, 0.05]], 0.2, "sine")
+			return _tone([[420.0, 0.05]], 0.14, "sine")
 
 
 ## segments: [[hz, seconds], ...] played back to back with a decay envelope.

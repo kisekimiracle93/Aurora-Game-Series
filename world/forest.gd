@@ -1,14 +1,15 @@
 extends AreaBase
 ## THE VERDANT PASS — the grassland forest between Aethertown and the frozen
 ## fields. A wide, clear main road walled by dense treelines; branch paths
-## peel off to a mini-boss clearing and treasure caches; two routes break
-## east into the ice. The deep woods beyond the walls are dense but passable
-## scatter (walk among the trunks all you like — the walls only guard the road).
+## peel off to a mini-boss clearing and treasure caches; two gated routes
+## break east into the ice. The deep woods beyond the walls are dense but
+## passable scatter — wander the trunks all you like, only the road is fenced.
 
 
 func _init() -> void:
 	area_name = "THE VERDANT PASS — green, for now"
 	music_track = "forest"
+	ambience_profile = "forest"
 	map_size = Vector2(3200, 2000)
 	frost_level = 0.0
 	fog_level = 0.10
@@ -21,16 +22,19 @@ func _setup_area() -> void:
 	_build_deep_woods()
 	_build_branches()
 	_build_foes()
-	add_save_crystal(Vector2(1600, 860))
+	add_save_crystal(Vector2(1600, 1000))
 	for torch_pos: Vector2 in [
-		Vector2(420, 920), Vector2(900, 920), Vector2(1380, 920),
-		Vector2(1860, 920), Vector2(2340, 920), Vector2(2820, 920),
+		Vector2(420, 950), Vector2(900, 950), Vector2(1380, 950),
+		Vector2(1860, 950), Vector2(2340, 950), Vector2(2820, 950),
 	]:
 		add_torch(torch_pos)
+	add_road_gate(Vector2(200, 1000))
+	add_road_gate(Vector2(3000, 705))
+	add_road_gate(Vector2(3000, 1425))
 	add_flowers([
-		Vector2(500, 1050), Vector2(700, 870), Vector2(1100, 1060), Vector2(1500, 880),
-		Vector2(1900, 1050), Vector2(2300, 880), Vector2(2700, 1050), Vector2(900, 1080),
-		Vector2(2000, 870), Vector2(2600, 880), Vector2(1300, 1070), Vector2(1700, 1080),
+		Vector2(500, 1050), Vector2(700, 905), Vector2(1100, 1060), Vector2(1500, 910),
+		Vector2(1900, 1050), Vector2(2300, 905), Vector2(2700, 1050), Vector2(900, 1080),
+		Vector2(2000, 900), Vector2(2600, 905), Vector2(1300, 1070), Vector2(1700, 1080),
 	], 13)
 
 	# West: home to Aethertown. East: two routes into the Crystal Fields.
@@ -42,7 +46,7 @@ func _setup_area() -> void:
 	west.position = Vector2(50, 850)
 	west.add_theme_font_size_override("font_size", 14)
 	add_child(west)
-	for east_label: Array in [["North pass — the fields >", Vector2(2880, 570)], ["South pass — the fields >", Vector2(2880, 1290)]]:
+	for east_label: Array in [["North pass — the fields >", Vector2(2860, 600)], ["South pass — the fields >", Vector2(2860, 1320)]]:
 		var sign_label: Label = Label.new()
 		sign_label.text = String(east_label[0])
 		sign_label.position = east_label[1]
@@ -64,8 +68,10 @@ func _build_ground() -> void:
 				Color(0.2, 0.35, 0.2, 0.12) if rng.randf() < 0.5 else Color(0.5, 0.65, 0.4, 0.10)
 			))
 	add_child(mottle)
-	# The main road: broad and unmissable.
+	# The main road: broad and unmissable, broken by old cobble patches.
 	add_rect(Rect2(0, 940, map_size.x, 120), Color(0.52, 0.44, 0.32, 0.9), -8)
+	for patch_x: float in [300.0, 1150.0, 2050.0, 2900.0]:
+		add_cobble_road(Rect2(patch_x, 955, 180, 90))
 	# Branch paths: north to the alpha clearing, south to the cache hollow,
 	# and the two eastern passes.
 	add_rect(Rect2(1080, 420, 110, 520), Color(0.5, 0.43, 0.32, 0.85), -8)
@@ -75,22 +81,14 @@ func _build_ground() -> void:
 	add_rect(Rect2(2700, 700, 90, 740), Color(0.5, 0.43, 0.32, 0.85), -8)
 
 
-func _tree(pos: Vector2, solid: bool) -> void:
-	var art: Texture2D = AssetLibrary.texture("props", "pine_cluster")
-	if art == null:
-		return
-	var pine: Sprite2D = Sprite2D.new()
-	pine.texture = art
-	pine.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pine.scale = Vector2(2.0, 2.0)
-	pine.position = pos
-	pine.z_index = 3 if solid else 2
-	pine.material = AssetLibrary.foliage_material()
-	if not solid:
-		pine.modulate = Color(0.85, 0.95, 0.85, 0.92)  # deep-woods scatter
-	add_child(pine)
-	if solid:
-		add_wall(Rect2(pos - Vector2(44, 30), Vector2(88, 90)))
+## A pine on the walkable plane. Solid trees collide at the trunk and you can
+## slip behind their crowns; scatter trees are pure atmosphere.
+func _tree(pos: Vector2, solid: bool, single: bool = false) -> void:
+	var anchor: Node2D = add_prop(
+		"pine_single" if single else "pine_cluster", pos, 2.0, solid, true
+	)
+	if anchor != null and not solid:
+		(anchor.get_child(0) as Sprite2D).modulate = Color(0.85, 0.95, 0.85, 0.92)
 
 
 ## Tree WALLS shepherd the road; gaps open only where paths branch.
@@ -99,42 +97,42 @@ func _build_treelines() -> void:
 	while x < map_size.x - 60.0:
 		# North wall of the main road (gap at the north branch + east passes).
 		if not (absf(x - 1135.0) < 130.0 or x > 2640.0):
-			_tree(Vector2(x, 880), true)
+			_tree(Vector2(x, 830), true)
 		# South wall (gap at the south branch + east passes).
 		if not (absf(x - 2105.0) < 130.0 or x > 2640.0):
-			_tree(Vector2(x, 1120), true)
+			_tree(Vector2(x, 1185), true)
 		x += 96.0
 	# Walls along the branch paths.
-	for y: float in [480.0, 600.0, 720.0, 840.0]:
-		_tree(Vector2(1020, y), true)
-		_tree(Vector2(1250, y), true)
-	for y: float in [1120.0, 1240.0, 1360.0, 1480.0]:
-		_tree(Vector2(1990, y), true)
-		_tree(Vector2(2220, y), true)
+	for y: float in [420.0, 560.0, 700.0, 840.0]:
+		_tree(Vector2(1010, y), true)
+		_tree(Vector2(1260, y), true)
+	for y: float in [1185.0, 1320.0, 1455.0, 1590.0]:
+		_tree(Vector2(1980, y), true)
+		_tree(Vector2(2230, y), true)
 	# Pass walls funneling to the two eastern exits.
 	for x2: float in [2700.0, 2850.0, 3000.0]:
-		_tree(Vector2(x2, 580), true)
-		_tree(Vector2(x2, 830), true)
-		_tree(Vector2(x2, 1300), true)
-		_tree(Vector2(x2, 1550), true)
+		_tree(Vector2(x2, 540), true)
+		_tree(Vector2(x2, 880), true)
+		_tree(Vector2(x2, 1255), true)
+		_tree(Vector2(x2, 1600), true)
 
 
 ## The deep woods: dense, atmospheric, and passable — wander freely.
 func _build_deep_woods() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 77
-	for i: int in range(170):
+	for i: int in range(160):
 		var pos: Vector2 = Vector2(
 			rng.randf_range(80.0, map_size.x - 80.0), rng.randf_range(80.0, map_size.y - 80.0)
 		)
 		# Keep the road and clearings breathable.
-		if absf(pos.y - 1000.0) < 200.0:
+		if absf(pos.y - 1000.0) < 250.0:
 			continue
 		if Rect2(950, 80, 380, 380).has_point(pos):  # alpha clearing
 			continue
 		if Rect2(1900, 1540, 420, 380).has_point(pos):  # cache hollow
 			continue
-		_tree(pos, false)
+		_tree(pos, false, rng.randf() < 0.55)
 
 
 func _build_branches() -> void:
@@ -155,6 +153,8 @@ func _build_branches() -> void:
 	hollow_label.add_theme_font_size_override("font_size", 13)
 	hollow_label.modulate = Color(0.75, 0.7, 0.6)
 	add_child(hollow_label)
+	add_prop("barrel", Vector2(2160, 1730), 1.8)
+	add_prop("crate", Vector2(2055, 1735), 1.8)
 
 
 func _build_foes() -> void:
@@ -165,7 +165,7 @@ func _build_foes() -> void:
 		["pass_bandits", "bandit_ambush", "Bandit Cutthroat",
 			[Vector2(2105, 1600), Vector2(2160, 1700)]],
 		["pass_wolves", "wolves_2", "Aether Wolf",
-			[Vector2(700, 1300), Vector2(950, 1380), Vector2(760, 1480)]],
+			[Vector2(700, 1400), Vector2(950, 1480), Vector2(760, 1580)]],
 		["pass_road_bandit", "bandit_pair", "Roadside Bandit",
 			[Vector2(2400, 990), Vector2(2550, 990)]],
 	]

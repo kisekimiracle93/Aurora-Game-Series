@@ -11,6 +11,7 @@ func _init() -> void:
 	map_size = Vector2(1280, 720)
 	fog_level = 0.02
 	tracks_on_map = false  # a house is still "in town" on the map
+	ambience_profile = "interior"  # the street noise stays outside
 
 
 func _setup_area() -> void:

@@ -7,8 +7,14 @@ var _rect: ColorRect
 var _material: ShaderMaterial
 
 
+## Below the UI layers (80+): the lens grades the WORLD; menus, HUDs, and
+## combat text stay needle-sharp (owner spec: "we can still read during combat").
+const LENS_LAYER: int = 55
+const UI_LAYER: int = 80
+
+
 func _ready() -> void:
-	layer = 99
+	layer = LENS_LAYER
 	_rect = ColorRect.new()
 	_rect.size = Vector2(1280, 720)
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -32,11 +38,11 @@ func mood_world(frost: float = 0.0, fog: float = 0.0) -> void:
 
 
 func mood_battle() -> void:
-	set_param("dof_amount", 0.5)
+	set_param("dof_amount", 0.38)
 	set_param("focus_y", 0.46)
-	set_param("vignette_strength", 0.36)
+	set_param("vignette_strength", 0.34)
 	set_param("frost_amount", 0.0)
-	set_param("fog_amount", 0.08)
+	set_param("fog_amount", 0.06)
 
 
 func mood_menu() -> void:

@@ -794,3 +794,119 @@ save + 5 torches at 2560×1600, map-chain scenes exist + map page toggle.
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal (per the
 human: "wait for the memory at the dungeon").
+
+---
+
+## Beauty & feel pass (owner-directed): "lean into the pretty stuff HARD"
+
+Owner playtested the world-growth build and sent the big list. Everything
+landed; the two render bugs turned out to be one-line truths:
+
+**The two real bugs**
+- **"Trees render badly"** — they weren't trees. The prop crops on the town
+  sheet were misaligned: `pine_cluster.png` actually contained a fence, a
+  dirt patch, and a crate; the inn crop had swallowed half the real pine
+  grove. Wrote an alpha-cluster scanner (connected components over the
+  transparent sheet), probed every rect visually at 3-4x, and re-cropped:
+  a real 6-pine grove, a slim single pine, the complete inn (chimney to
+  porch), the full tall house — plus NEW finds: a real treasure chest,
+  barrel, true water tile (the old "water" was rock wall tinted blue!),
+  a painted waterfall, rock-wall banks, sandstone cobbles (h+v), dirt
+  patch, and wooden posts. Normal maps rebaked (33).
+- **"WASD facings wrong"** — the hero sheet's rows are up/right/down/left
+  (N/E/S/W), not the assumed down/left/right/up. One-line fix in
+  crop_walks.gd, all 84 frames regenerated; W now shows the back, S the
+  face, A/D the proper profiles. Regression test pins all 4 facings ×
+  4 characters × 3 frames on disk.
+
+**World feel**
+- **Y-sort walk-behind**: the whole walkable plane (player, NPCs, foes,
+  trees, houses, castle, torches, chests) shares one z-plane, foot-anchored
+  — walk north of anything and you disappear behind it. Collision is
+  trunk/base-band only ("no walking ON houses", but you CAN slip behind).
+  Two chests now hide behind buildings (widow's back lot, castle's lee).
+- **Castle Aetherhold v2**: three depth layers — dim rear curtain + rear
+  towers, the great keep rising tallest, bright front wall with parapet
+  line + buttresses, four crenellated front towers, gatehouse, portcullis
+  bars, brazier pair, 10 lit windows, banners everywhere. 1020px of solid
+  wall; gate knock kept.
+- **A river** through town: real water tile + flow shader, rock banks,
+  drifting glints, two cobbled bridges with post-and-rail, reeds/flowers.
+- **Cobblestone roads** (avenue, market lane, gate plaza) from the new
+  cobble crops; wooden waypost **gates** frame the road in town, the pass
+  (×3), and the fields.
+- **Torch v2**: stone footing, iron-banded pole, halo bloom sprite, 14
+  embers, stronger light (1.65) with a live flicker loop after ignition.
+- **Save crystals boosted**: reaching light beam, rising motes, bigger glow.
+- **Bubble-talk vignettes** (no interaction needed): the shop crowd ("I'll
+  buy three." / "I need more money... darn." / "I should've asked Richard
+  what colors he liked."), a farmer vs. his immovable cow Bess, and two
+  kids playing tag by the well. Speech bubbles fade in/out as you pass.
+- Building name labels removed from the world (minimap/doors carry it).
+- Village clutter: barrels, crates, hedges, single pines, a drawn handcart.
+
+**Sky & night**
+- **15-minute day, night-heavy** (dark ~18:45→06:45), and nights are
+  properly DARK now (deep blue 0.225/0.26/0.60). A **moon**
+  (DirectionalLight2D, silver, with its own shadows) rises with
+  night-depth; **god rays** drift by day and turn to pale moonbeams; cloud
+  shadows slide across the land continuously.
+- **Fireflies** (blinking GPU swarm) wake at night; **butterflies** flutter
+  by day; **dust/pollen** rises through the light everywhere. All
+  collision-free.
+- **[T] lantern**: an implied carried light — warm bloom + shadows around
+  the player. **[G] run toggle** with heel-kick dust puffs.
+- **Per-area soundscape** (new `Soundscape` autoload, all synthesized,
+  file-overridable): beds crossfade by day/night — village murmur + river
+  by day, crickets + river at night; forest wind/leaves vs crickets/night
+  wind; fields wind; cave drips. Random one-shots: owls, wolf howls,
+  coyote yips, birds, frogs, dogs, chickens, kids' giggles, hammer taps,
+  branch snaps, a far bell — big calls duck the music for a breath. Music
+  itself now breathes (±2.2dB slow swell) once a track settles.
+
+**Combat**
+- **Readable UI**: PostFX lens moved to layer 55; ALL battle UI (timeline,
+  log, HUD, menus, banners, end overlay) rides a CanvasLayer at 80 — sharp
+  under any blur, immune to camera zoom. Battle DoF eased (0.38).
+- **Biome stages** — no more floating in space: sky band → horizon scenery
+  (pines / cliffs) → stone terrace lip → textured ground platform with
+  mottle + scatter props. Meadow (town), forest, tundra (fields), cavern
+  (dungeon/boss keeps the painted backdrop + rock shelf). Ranks moved down
+  onto the platform.
+- **Facing fixed**: party uses right-profile walk frames (eyes on the
+  enemy); human foes use left profiles; beasts/boss art already glares the
+  right way.
+- **Camera commits**: ACT zoom 1.16→1.55, ECHO 1.26→1.95, punch lean 0.55.
+- **[Y] debug win** (full victory flow: snapshot, foe cleared, Continue)
+  beside the existing debug end.
+- **Trash HP −~28%** (wolf 160→115, bandits 175→125/140→100, wisp 90→70,
+  stag 420→330 — still mini-elite — crystal wolf 120→90). Boss untouched.
+- Menu sounds rebuilt: soft 290Hz tick + woody 210Hz "thock" (was 900/1250Hz
+  beeps), default blip dropped to 420Hz/0.14.
+
+**Menu & HUD**
+- **In-game menu front page**: PARTY · WORLD MAP · GAME GUIDE · QUIT TO
+  TITLE live; EQUIPMENT · SPHERE GRID · OPTIONS present but greyed "(not
+  yet built)". Esc/C from any sub-page returns to the menu, not out.
+- **Party condition tracker** on the front page (new `PartyMood`, pure +
+  tested): per-member readings ("Bastil is confident", "carrying too
+  much", "slipping into the dark"...) with reading colors + meter digits,
+  and a party line from the WIP formula (resolve + duty·0.3 − burden·0.7 −
+  darkness·0.4): greatly resolved → resolved → ready → strained →
+  burdened → near breaking.
+- **GAME GUIDE**: all meters explained, full control sheet (incl. T/G/M/Y),
+  save crystals, the road.
+- **Corner minimap** in every area: stone panel, Bastil facecard + name +
+  area, live map with player (gold), exits (yellow), save crystals (cyan),
+  chests (amber), patrolling foes (red).
+
+**Test status:** `190/190 passed (1462 asserts)`; boots clean. New coverage
+(`test_beauty_pass.gd` + growth updates): re-cropped props exist + pine is
+a real grove, all 84 walk frames on disk, soundscape score sheet + every
+synth voice, PartyMood member/party bands + colors, 15-min night-heavy
+clock + night depth, battle biome picker, party token profile facing,
+HP cuts within plan ranges, camera zoom spec, new input actions, lens
+layer < UI layer, minimap bookkeeping + firefly night wiring, menu
+page flow (front page → party/map/guide and back).
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal.

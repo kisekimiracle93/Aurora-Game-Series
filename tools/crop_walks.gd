@@ -1,9 +1,10 @@
 extends SceneTree
 ## One-shot tool: crop full 4-direction x 3-frame walk sets for every human
-## character out of Heroes_01.png (RPG-Maker layout: rows down/left/right/up).
+## character out of Heroes_01.png. Row order verified by eye against the
+## sheet: top->bottom is up / right / down / left (N,E,S,W).
 ## Run: godot --headless --path . -s tools/crop_walks.gd
 
-const DIRS: Array[String] = ["down", "left", "right", "up"]
+const DIRS: Array[String] = ["up", "right", "down", "left"]
 const PICKS: Dictionary = {
 	"bastil": Vector2i(0, 0),
 	"cavene": Vector2i(1, 0),

@@ -8,6 +8,7 @@ extends AreaBase
 func _init() -> void:
 	area_name = "THE CRYSTAL FIELDS — the wild watches"
 	music_track = "world"
+	ambience_profile = "fields"
 	encounters_enabled = false  # superseded by visible map foes
 	map_size = Vector2(2560, 1600)
 	frost_level = 0.22
@@ -29,6 +30,7 @@ func _setup_area() -> void:
 	add_exit(Rect2(0, 620, 40, 200), "res://world/forest.tscn", Vector2(3060, 700))
 	add_exit(Rect2(0, 1120, 40, 200), "res://world/forest.tscn", Vector2(3060, 1420))
 	add_exit(Rect2(2520, 620, 40, 200), "res://world/dungeon.tscn", Vector2(100, 360))
+	add_road_gate(Vector2(2400, 705))
 	add_save_crystal(Vector2(2380, 900))
 	for torch_pos: Vector2 in [Vector2(700, 620), Vector2(1500, 620), Vector2(2200, 620)]:
 		add_torch(torch_pos)
@@ -53,21 +55,22 @@ func _prop(prop_name: String, pos: Vector2, prop_scale: float = 2.0, solid: bool
 	var art: Texture2D = AssetLibrary.texture("props", prop_name)
 	if art == null:
 		return
-	var sprite: Sprite2D = Sprite2D.new()
-	sprite.texture = art
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.scale = Vector2(prop_scale, prop_scale)
-	sprite.position = pos
-	sprite.z_index = 3
-	if prop_name == "pine_cluster":
-		sprite.material = AssetLibrary.foliage_material()
-	add_child(sprite)
-	if solid:
-		var size: Vector2 = art.get_size() * prop_scale * 0.7
-		add_wall(Rect2(pos - size / 2.0, size))
-		if prop_name.begins_with("cliff"):
+	if prop_name.begins_with("cliff"):
+		# Edge scenery: stays behind the walkable plane, casts real shadows.
+		var sprite: Sprite2D = Sprite2D.new()
+		sprite.texture = art
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.scale = Vector2(prop_scale, prop_scale)
+		sprite.position = pos
+		sprite.z_index = 3
+		add_child(sprite)
+		if solid:
+			var size: Vector2 = art.get_size() * prop_scale * 0.7
+			add_wall(Rect2(pos - size / 2.0, size))
 			add_occluder(Rect2(pos - size / 2.0, size))
 			add_ground_shadow(pos + Vector2(0, size.y / 2.0 - 8.0), size.x * 1.3)
+		return
+	add_prop(prop_name, pos, prop_scale, solid, prop_name.begins_with("pine"))
 
 
 ## Soft tonal mottling + the trodden trail: kills the flat-color blandness.
@@ -169,7 +172,20 @@ func _build_river_and_falls() -> void:
 		add_rect(river_rect, Color(0.45, 0.7, 0.9, 0.9), -8)
 	add_wall(Rect2(1310, 420, 96, 1180))  # too cold to ford (crossing at the falls pool)
 
-	# The waterfall: white water sheeting off the cliff into a mist pool.
+	# The painted falls themselves (toolbox art), doubled for the long drop.
+	var falls_art: Texture2D = AssetLibrary.texture("props", "waterfall")
+	if falls_art != null:
+		for stack: int in range(2):
+			var sheet: Sprite2D = Sprite2D.new()
+			sheet.texture = falls_art
+			sheet.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			sheet.scale = Vector2(2.6, 2.0)
+			sheet.position = Vector2(1358, 180 + stack * 142)
+			sheet.z_index = -7
+			sheet.material = AssetLibrary.water_material()
+			add_child(sheet)
+
+	# The waterfall spray: white water sheeting off the cliff into a mist pool.
 	var falls: CPUParticles2D = CPUParticles2D.new()
 	falls.position = Vector2(1358, 240)
 	falls.amount = 90

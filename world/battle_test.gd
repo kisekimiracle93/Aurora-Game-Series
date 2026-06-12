@@ -53,13 +53,28 @@ var boss_controller: FrozenShepherdController
 var _add_slot: int = 0
 var _active_arrow: SelectionArrow
 var _target_arrow: SelectionArrow
-## World layer (backdrop + combatants + impact FX) — shaken by the presenter
-## while the UI stays rock steady.
+## World layer (backdrop + combatants + impact FX) — shaken and zoomed by the
+## camera while the UI rides its own CanvasLayer above the postfx lens,
+## rock-steady and needle-sharp.
 var stage: Node2D
+var ui_layer: CanvasLayer
 var presenter: ActionPresenter
 ## Set when this battle was launched from the world flow (WorldState pending).
 var world_mode: bool = false
 var world_roster: String = ""
+
+
+## Which stage to dress: the land you were standing on decides.
+static func biome_for_scene(scene_path: String, roster_id: String) -> String:
+	if roster_id == "boss" or scene_path.contains("dungeon"):
+		return "cavern"
+	if scene_path.contains("town"):
+		return "meadow"
+	if scene_path.contains("forest"):
+		return "forest"
+	if scene_path.contains("outside"):
+		return "tundra"
+	return "tundra"
 
 
 ## Encounter compositions per roster id (world flow + playtest variety).
@@ -104,11 +119,18 @@ func _exit_tree() -> void:
 	Engine.time_scale = 1.0  # never leak echo slow-mo out of the battle
 
 
-## Controller B / Esc backs out of target selection.
+## Controller B / Esc backs out of target selection; [Y] is the debug win.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and target_select != null and target_select.visible:
 		_on_target_cancelled()
 		get_viewport().set_input_as_handled()
+		return
+	if (
+		event is InputEventKey and event.pressed
+		and (event as InputEventKey).physical_keycode == KEY_Y
+	):
+		get_viewport().set_input_as_handled()
+		_on_debug_win()
 
 
 func _start_battle(is_defeat_retry: bool) -> void:
@@ -132,6 +154,9 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	stage = Node2D.new()
 	stage.name = "Stage"
 	add_child(stage)
+	ui_layer = CanvasLayer.new()
+	ui_layer.layer = 80  # above the postfx lens: combat text stays readable
+	add_child(ui_layer)
 	_build_battlefield()
 	_spawn_party(is_defeat_retry)
 	if roster == "boss":
@@ -154,9 +179,12 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	var postfx: Node = get_node_or_null("/root/PostFX")
 	if postfx != null:
 		postfx.mood_battle()
+	var soundscape: Node = get_node_or_null("/root/Soundscape")
+	if soundscape != null:
+		soundscape.set_scene_profile("battle")
 	presenter = ActionPresenter.new()
 	add_child(presenter)
-	presenter.setup(stage, self, camera)
+	presenter.setup(stage, ui_layer, camera)
 
 	encounter = CombatEncounter.new()
 	encounter.name = "Encounter"
@@ -185,14 +213,25 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	encounter.start()
 
 
+## Stage palettes per biome: sky top, horizon glow, ground tint, lip tint.
+const BIOME_LOOKS: Dictionary = {
+	"meadow": [Color(0.45, 0.62, 0.78), Color(0.78, 0.82, 0.70), Color(0.92, 1.0, 0.92), Color(0.85, 0.8, 0.72)],
+	"forest": [Color(0.30, 0.44, 0.46), Color(0.55, 0.68, 0.52), Color(0.80, 0.95, 0.78), Color(0.7, 0.74, 0.62)],
+	"tundra": [Color(0.36, 0.44, 0.62), Color(0.66, 0.74, 0.86), Color(0.95, 1.0, 1.1), Color(0.78, 0.84, 0.95)],
+	"cavern": [Color(0.07, 0.09, 0.14), Color(0.12, 0.16, 0.24), Color(0.55, 0.65, 0.85), Color(0.5, 0.58, 0.75)],
+}
+
+
 func _build_battlefield() -> void:
-	# Real backdrop art when supplied (assets/sprites/backgrounds/boss.png or
-	# battle.png); the phase-tint ColorRect rides on top either way so boss
-	# phase cues stay readable over any art.
+	var world: Node = get_node_or_null("/root/WorldState")
+	var biome: String = biome_for_scene(
+		String(world.return_scene) if world_mode and world != null else "", roster
+	)
 	var art: Texture2D = AssetLibrary.texture(
 		"backgrounds", "boss" if roster == "boss" else "battle"
 	)
-	if art != null:
+	if biome == "cavern" and art != null:
+		# The painted cavern: keep it, but ground the ranks on a rock shelf.
 		var image: TextureRect = TextureRect.new()
 		image.texture = art
 		image.size = Vector2(1280, 720)
@@ -200,25 +239,141 @@ func _build_battlefield() -> void:
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # pixel-art stretch
 		stage.add_child(image)
+		_build_ground_shelf(biome, 0.55)
+	else:
+		_build_open_stage(biome)
 	background = ColorRect.new()
-	background.color = PHASE_TINTS[1] if art == null else Color(PHASE_TINTS[1], 0.35)
+	background.color = Color(PHASE_TINTS[1], 0.35) if (biome == "cavern" and art != null) else Color(PHASE_TINTS[1], 0.12)
 	background.size = Vector2(1280, 720)
 	stage.add_child(background)
+
+
+## Sky band -> horizon scenery -> grounded platform: no more floating in space.
+func _build_open_stage(biome: String) -> void:
+	var look: Array = BIOME_LOOKS.get(biome, BIOME_LOOKS["tundra"])
+	var sky: ColorRect = ColorRect.new()
+	sky.color = look[0]
+	sky.size = Vector2(1280, 250)
+	stage.add_child(sky)
+	var horizon: ColorRect = ColorRect.new()
+	horizon.color = look[1]
+	horizon.position = Vector2(0, 250)
+	horizon.size = Vector2(1280, 56)
+	stage.add_child(horizon)
+	# Distant scenery row along the horizon.
+	if biome in ["meadow", "forest"]:
+		var pines: Texture2D = AssetLibrary.texture("props", "pine_cluster")
+		if pines != null:
+			for i: int in range(7):
+				var tree: Sprite2D = Sprite2D.new()
+				tree.texture = pines
+				tree.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				tree.scale = Vector2(1.4, 1.4)
+				tree.position = Vector2(60 + i * 195, 235)
+				tree.modulate = Color(0.45, 0.55, 0.55, 0.9)
+				stage.add_child(tree)
+	else:
+		var cliffs: Texture2D = AssetLibrary.texture("props", "cliff_tall")
+		if cliffs != null:
+			for i: int in range(5):
+				var cliff: Sprite2D = Sprite2D.new()
+				cliff.texture = cliffs
+				cliff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				cliff.scale = Vector2(1.6, 1.6)
+				cliff.position = Vector2(130 + i * 260, 190)
+				cliff.modulate = Color(0.62, 0.68, 0.85, 0.95)
+				stage.add_child(cliff)
+	_build_ground_shelf(biome, 1.0)
+
+
+## The fighting platform: textured ground + a stone terrace lip + scatter.
+func _build_ground_shelf(biome: String, opacity: float) -> void:
+	var look: Array = BIOME_LOOKS.get(biome, BIOME_LOOKS["tundra"])
+	var ground_top: float = 306.0
+	var grass: Texture2D = null
+	if biome in ["meadow", "forest"] and ResourceLoader.exists(
+		"res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png"
+	):
+		grass = load("res://assets/all files/town_rpg_pack/town_rpg_pack/graphics/grass-tile-2.png")
+	if grass != null:
+		var turf: TextureRect = TextureRect.new()
+		turf.texture = grass
+		turf.stretch_mode = TextureRect.STRETCH_TILE
+		turf.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		turf.position = Vector2(0, ground_top)
+		turf.size = Vector2(1280, 720 - ground_top)
+		turf.modulate = Color(look[2], opacity)
+		stage.add_child(turf)
+	else:
+		var floor_rect: ColorRect = ColorRect.new()
+		floor_rect.color = Color(
+			look[2] * (Color(0.55, 0.6, 0.72) if biome == "cavern" else Color(0.72, 0.78, 0.88)),
+			opacity
+		)
+		floor_rect.position = Vector2(0, ground_top)
+		floor_rect.size = Vector2(1280, 720 - ground_top)
+		stage.add_child(floor_rect)
+	# Terrace lip: tiled rock edge marking where the platform begins.
+	var rock: Texture2D = AssetLibrary.texture("props", "rock_wall")
+	if rock != null:
+		var lip: TextureRect = TextureRect.new()
+		lip.texture = rock
+		lip.stretch_mode = TextureRect.STRETCH_TILE
+		lip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		lip.position = Vector2(0, ground_top - 12.0)
+		lip.size = Vector2(640, 14)
+		lip.scale = Vector2(2.0, 2.0)
+		lip.modulate = Color(look[3], opacity)
+		stage.add_child(lip)
+	# Ground mottle: tonal blotches kill the flat fill.
+	var mottle: Node2D = Node2D.new()
+	mottle.position = Vector2(0, 0)
+	mottle.draw.connect(func() -> void:
+		for i: int in range(26):
+			var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+			rng.seed = 400 + i
+			mottle.draw_circle(
+				Vector2(rng.randf_range(0, 1280), rng.randf_range(ground_top + 20, 700)),
+				rng.randf_range(20.0, 64.0),
+				Color(0, 0, 0.05, 0.07) if rng.randf() < 0.55 else Color(1, 1, 1, 0.05)
+			))
+	stage.add_child(mottle)
+	# Biome scatter so each region's arena reads different at a glance.
+	match biome:
+		"tundra", "cavern":
+			for prop_config: Array in [
+				["snow_rocks", Vector2(140, 600), 1.6], ["icicles", Vector2(1180, 420), 1.5],
+				["snow_rocks", Vector2(1120, 660), 1.4],
+			]:
+				_stage_prop(String(prop_config[0]), prop_config[1], float(prop_config[2]))
+		"forest":
+			_stage_prop("pine_single", Vector2(90, 460), 1.8)
+			_stage_prop("pine_single", Vector2(1200, 520), 2.0)
+		"meadow":
+			_stage_prop("pine_single", Vector2(1210, 470), 1.8)
+			_stage_prop("barrel", Vector2(90, 600), 1.6)
+
+
+func _stage_prop(prop_name: String, pos: Vector2, prop_scale: float) -> void:
+	var art: Texture2D = AssetLibrary.texture("props", prop_name)
 	if art == null:
-		var ground: ColorRect = ColorRect.new()
-		ground.color = Color(0.13, 0.15, 0.20)
-		ground.position = Vector2(0, 420)
-		ground.size = Vector2(1280, 140)
-		stage.add_child(ground)
+		return
+	var sprite: Sprite2D = Sprite2D.new()
+	sprite.texture = art
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(prop_scale, prop_scale)
+	sprite.position = pos
+	stage.add_child(sprite)
 
 
-## FFX-style staggered ranks: melee-forward, casters back, merc in the rear.
+## FFX-style staggered ranks on the platform: melee-forward, casters back,
+## merc in the rear — everyone with their feet on the ground band.
 const PARTY_SLOTS: Array[Vector2] = [
-	Vector2(330, 150), Vector2(285, 235), Vector2(330, 320),
-	Vector2(285, 405), Vector2(330, 480),
+	Vector2(330, 330), Vector2(282, 388), Vector2(330, 446),
+	Vector2(282, 504), Vector2(336, 548),
 ]
 const ENEMY_SLOTS: Array[Vector2] = [
-	Vector2(920, 160), Vector2(1010, 320), Vector2(920, 480),
+	Vector2(920, 340), Vector2(1010, 430), Vector2(920, 520),
 ]
 
 
@@ -241,7 +396,7 @@ func _spawn_party(is_defeat_retry: bool) -> void:
 			color = HEIR_COLOR
 		elif data.is_merc:
 			color = MERC_COLOR
-		_add_token(member, color)
+		_add_token(member, color, 1.0, "right")  # eyes on the enemy line
 
 
 func _spawn_enemies() -> void:
@@ -258,13 +413,13 @@ func _spawn_enemies() -> void:
 		enemy.position = ENEMY_SLOTS[i % ENEMY_SLOTS.size()]
 		stage.add_child(enemy)
 		enemies.append(enemy)
-		_add_token(enemy, ENEMY_COLOR, 1.3)  # foes read bigger on the field
+		_add_token(enemy, ENEMY_COLOR, 1.3, "left")  # bigger, facing the party
 
 
 func _spawn_boss() -> void:
 	var data: EnemyData = load(BOSS_PATH)
 	var boss: BaseCombatant = BaseCombatant.from_enemy(data)
-	boss.position = Vector2(950, 300)
+	boss.position = Vector2(950, 410)
 	stage.add_child(boss)
 	enemies.append(boss)
 	_add_token(boss, BOSS_COLOR, 1.7)
@@ -274,10 +429,10 @@ func _spawn_boss() -> void:
 
 ## Mid-fight reinforcements (Crystal Wolves) get tokens beside the boss.
 func _on_combatant_added(combatant: BaseCombatant) -> void:
-	combatant.position = Vector2(1120, 180 + _add_slot * 240)
+	combatant.position = Vector2(1120, 350 + _add_slot * 140)
 	_add_slot += 1
 	stage.add_child(combatant)
-	_add_token(combatant, ENEMY_COLOR)
+	_add_token(combatant, ENEMY_COLOR, 1.0, "left")
 
 
 func _on_boss_phase_changed(phase: int, title: String) -> void:
@@ -299,17 +454,19 @@ func _on_boss_phase_changed(phase: int, title: String) -> void:
 	banner.position = Vector2(0, 200)
 	banner.size = Vector2(1280, 60)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(banner)
+	ui_layer.add_child(banner)
 	var fade: Tween = create_tween()
 	fade.tween_interval(1.6)
 	fade.tween_property(banner, "modulate:a", 0.0, 0.9)
 	fade.tween_callback(banner.queue_free)
 
 
-func _add_token(combatant: BaseCombatant, color: Color, size_scale: float = 1.0) -> void:
+func _add_token(
+	combatant: BaseCombatant, color: Color, size_scale: float = 1.0, face: String = ""
+) -> void:
 	var token: CombatantToken = CombatantToken.new()
 	combatant.add_child(token)
-	token.setup(combatant, color, size_scale)
+	token.setup(combatant, color, size_scale, face)
 	tokens[combatant] = token
 	combatant.stats.hp_changed.connect(_on_combatant_hp_changed.bind(combatant))
 	combatant.status.status_ticked.connect(_on_status_ticked.bind(combatant))
@@ -330,7 +487,7 @@ func _apply_carried_meters(member: BaseCombatant, is_defeat_retry: bool) -> void
 func _build_ui() -> void:
 	timeline = TurnTimeline.new()
 	timeline.position = Vector2(16, 16)
-	add_child(timeline)
+	ui_layer.add_child(timeline)
 
 	# History log lives in the corner now — the declaration banner is the
 	# loud center-stage narrator.
@@ -338,23 +495,23 @@ func _build_ui() -> void:
 	combat_log.position = Vector2(962, 8)
 	combat_log.custom_minimum_size = Vector2(306, 140)
 	# stone-opaque per playtest feedback (was translucent)
-	add_child(combat_log)
+	ui_layer.add_child(combat_log)
 
 	hud = PartyHUD.new()
 	hud.position = Vector2(12, 556)
-	add_child(hud)
+	ui_layer.add_child(hud)
 	hud.setup(party)
 
 	action_menu = ActionMenu.new()
 	action_menu.position = Vector2(16, 300)
-	add_child(action_menu)
+	ui_layer.add_child(action_menu)
 	action_menu.ability_chosen.connect(_on_ability_chosen)
 	action_menu.page_changed.connect(func() -> void:
 		_place_menu_above_hud.call_deferred(action_menu))
 
 	target_select = TargetSelect.new()
 	target_select.position = Vector2(16, 300)
-	add_child(target_select)
+	ui_layer.add_child(target_select)
 	target_select.target_chosen.connect(_on_target_chosen)
 	target_select.cancelled.connect(_on_target_cancelled)
 	target_select.target_hovered.connect(_on_target_hovered)
@@ -365,14 +522,33 @@ func _build_ui() -> void:
 	_target_arrow = SelectionArrow.new(Color(0.95, 0.25, 0.2))
 	stage.add_child(_target_arrow)
 
-	# Testing hatch: end any fight instantly (no penalty, no rewards).
+	# Testing hatches: end any fight instantly, or win it outright ([Y]).
 	var debug_exit: Button = Button.new()
 	debug_exit.text = "✕ debug: end fight"
 	debug_exit.add_theme_font_size_override("font_size", 11)
 	debug_exit.modulate = Color(1, 1, 1, 0.6)
 	debug_exit.position = Vector2(1140, 690)
 	debug_exit.pressed.connect(_on_debug_exit)
-	add_child(debug_exit)
+	ui_layer.add_child(debug_exit)
+	var debug_win: Button = Button.new()
+	debug_win.text = "✓ debug: win fight [Y]"
+	debug_win.add_theme_font_size_override("font_size", 11)
+	debug_win.modulate = Color(1, 1, 1, 0.6)
+	debug_win.position = Vector2(990, 690)
+	debug_win.pressed.connect(_on_debug_win)
+	ui_layer.add_child(debug_win)
+
+
+## Debug victory: stops the encounter loop and runs the real victory flow
+## (meters snapshot, foe cleared, Continue button) as if you'd earned it.
+func _on_debug_win() -> void:
+	if encounter == null or not is_instance_valid(encounter):
+		return
+	if presenter != null:
+		presenter.reset_time_scale()
+	encounter.queue_free()
+	encounter = null
+	_on_battle_ended(true)
 
 
 func _on_debug_exit() -> void:
@@ -585,7 +761,7 @@ func _show_end_overlay(victory: bool) -> void:
 	var overlay: PanelContainer = PanelContainer.new()
 	overlay.custom_minimum_size = Vector2(420, 0)
 	overlay.position = Vector2(430, 270)
-	add_child(overlay)
+	ui_layer.add_child(overlay)
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	overlay.add_child(box)

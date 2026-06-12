@@ -12,24 +12,51 @@ var _guard_label: Label
 var _flash_target: CanvasItem
 
 
-func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1.0) -> void:
+## `face`: "right"/"left" turns the fighter toward the enemy line, using the
+## profile frames from their walk set when one exists (party faces the foes,
+## human foes face the party); beasts/boss art already glares the right way.
+func setup(
+	combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1.0,
+	face: String = ""
+) -> void:
 	combatant = combatant_in
 	scale = Vector2(size_scale, size_scale)
 
-	# Real art when available (assets/sprites/characters/<name>.png), else grey-box.
+	# Profile-facing walk frame first, then static art, else grey-box.
+	var sprite: Node2D = null
+	if face != "":
+		var frames: SpriteFrames = AssetLibrary.walk_frames(combatant.display_name)
+		if frames == null:
+			# "Roadside Bandit 2" and friends share the base sheet.
+			frames = AssetLibrary.walk_frames(combatant.display_name.rstrip("0123456789 "))
+		if frames != null:
+			var animated: AnimatedSprite2D = AnimatedSprite2D.new()
+			animated.sprite_frames = frames
+			animated.animation = "idle_" + face
+			animated.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			animated.play()
+			sprite = animated
+			var frame_height: float = 48.0
+			var frame_texture: Texture2D = frames.get_frame_texture("idle_" + face, 0)
+			if frame_texture != null:
+				frame_height = float(frame_texture.get_height())
+			var animated_fit: float = maxf(1.0, round((BODY_SIZE.y * 1.4) / frame_height))
+			animated.scale = Vector2(animated_fit, animated_fit)
+			animated.position.y = (BODY_SIZE.y - frame_height * animated_fit) / 2.0
+			add_child(animated)
 	var art: Texture2D = AssetLibrary.texture("characters", combatant.display_name)
-	var sprite: Sprite2D = null
-	if art != null:
-		sprite = Sprite2D.new()
-		sprite.texture = art
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # crisp pixel art
+	if sprite == null and art != null:
+		var still: Sprite2D = Sprite2D.new()
+		still.texture = art
+		still.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # crisp pixel art
 		var height: float = float(art.get_height())
 		if height > 0.0:
 			# Integer upscale keeps pixels square; bottom-align with the old box.
 			var fit: float = maxf(1.0, round((BODY_SIZE.y * 1.4) / height))
-			sprite.scale = Vector2(fit, fit)
-			sprite.position.y = (BODY_SIZE.y - height * fit) / 2.0
-		add_child(sprite)
+			still.scale = Vector2(fit, fit)
+			still.position.y = (BODY_SIZE.y - height * fit) / 2.0
+		add_child(still)
+		sprite = still
 
 	# Grounding shadow under the feet (sells "standing on the floor").
 	var shadow: Node2D = Node2D.new()
@@ -45,7 +72,7 @@ func setup(combatant_in: BaseCombatant, body_color: Color, size_scale: float = 1
 	_body.position = -(BODY_SIZE / 2.0)
 	_body.visible = sprite == null  # art replaces the grey-box rect
 	add_child(_body)
-	_flash_target = sprite if sprite != null else _body
+	_flash_target = sprite if sprite != null else (_body as CanvasItem)
 
 	var name_label: Label = Label.new()
 	name_label.text = combatant.display_name

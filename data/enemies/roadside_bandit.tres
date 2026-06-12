@@ -15,7 +15,7 @@ base_stats = {
 "evasion": 9,
 "focus": 12,
 "guard": 15,
-"hp": 140,
+"hp": 100,
 "power": 27,
 "speed": 27,
 "ward": 12

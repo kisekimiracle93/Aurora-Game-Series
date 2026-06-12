@@ -1,20 +1,29 @@
 class_name AreaBase
 extends Node2D
-## Shared scaffold for walkable areas (town / outside / dungeon): screen
-## bounds, a player avatar, exits to other scenes, interactables with an
-## E/A prompt, sequential dialog, and optional step-based random encounters.
+## Shared scaffold for walkable areas (town / forest / fields / dungeon):
+## bounds + follow camera, the player avatar, exits, interactables with an
+## E/A prompt, dialog/choices, chests, roamers, save crystals, torches that
+## ignite at night, ambient life (dust, butterflies, fireflies, god rays,
+## cloud shadows), bubble-talk vignettes, and a corner minimap. The whole
+## walkable plane Y-sorts, so everyone can pass BEHIND houses, trees, and
+## the castle.
 
 const SCREEN: Vector2 = Vector2(1280, 720)
+## The z plane everything walkable/standable shares; Y position decides draw
+## order inside it (feet-anchored), so sprites overlap like a real street.
+const SORT_Z: int = 5
 
 var player: PlayerAvatar
 var area_name: String = ""
 var music_track: String = ""
+## Soundscape profile ("town"/"forest"/"fields"/"dungeon"/"interior"/"").
+var ambience_profile: String = ""
 ## Maps larger than the screen get a follow camera clamped to these bounds.
 var map_size: Vector2 = Vector2(1280, 720)
 ## Interiors opt out so popping into a house doesn't smudge the travel trail.
 var tracks_on_map: bool = true
 
-## Random encounters (outside area): rolls a battle every N walked pixels.
+## Random encounters (legacy): rolls a battle every N walked pixels.
 var encounters_enabled: bool = false
 var encounter_rosters: Array[String] = []
 var _steps_until_encounter: float = 0.0
@@ -26,13 +35,26 @@ var _dialog_lines: Array[String] = []
 var _choice_box: VBoxContainer
 var _active_interactable: Dictionary = {}
 var _interactables: Array[Dictionary] = []  # {"area": Area2D, "prompt": String, "callback": Callable}
-var _hud_layer: CanvasLayer  # prompts/dialog ride above the scrolling map
+var _hud_layer: CanvasLayer  # prompts/dialog/minimap ride above the postfx lens
 ## Lens mood for this area (PostFX): frost at the screen edges, fog drift.
 var frost_level: float = 0.0
 var fog_level: float = 0.0
 
+## Minimap bookkeeping (filled by the add_* helpers).
+var _exit_rects: Array[Rect2] = []
+var _save_points: Array[Vector2] = []
+var _chest_points: Array[Vector2] = []
+var _minimap: Control
+
+## Day/night-reactive decor.
+var _fireflies: GPUParticles2D
+var _butterflies: Array[Node2D] = []
+var _rays: Array[Polygon2D] = []
+var _clouds: Node2D
+
 
 func _ready() -> void:
+	y_sort_enabled = true
 	_build_common()
 	_setup_area()  # scenes override
 	var world: Node = get_node_or_null("/root/WorldState")
@@ -43,10 +65,18 @@ func _ready() -> void:
 		atmosphere.apply_to_area(self)
 		atmosphere.night_changed.connect(_on_night_changed)
 	_play_area_music()
+	var soundscape: Node = get_node_or_null("/root/Soundscape")
+	if soundscape != null:
+		soundscape.set_scene_profile(ambience_profile)
 	var postfx: Node = get_node_or_null("/root/PostFX")
 	if postfx != null:
 		postfx.mood_world(frost_level, fog_level)
-	_set_torches_lit(atmosphere != null and atmosphere.is_night())
+	_build_sky_layer()
+	_build_ambient_life()
+	var night_now: bool = atmosphere != null and atmosphere.is_night()
+	_set_torches_lit(night_now)
+	_apply_night_decor(night_now)
+	_build_minimap()
 	_arm_encounter()
 
 
@@ -68,14 +98,47 @@ func _play_area_music() -> void:
 func _on_night_changed(now_night: bool) -> void:
 	_play_area_music()
 	_set_torches_lit(now_night)
+	_apply_night_decor(now_night)
 
 
 func _set_torches_lit(lit: bool) -> void:
 	for torch_light: Node in get_tree().get_nodes_in_group("torch_light"):
 		if not torch_light is PointLight2D:
 			continue
-		var tween: Tween = (torch_light as PointLight2D).create_tween()
-		tween.tween_property(torch_light, "energy", 1.15 if lit else 0.0, 1.4)
+		var light: PointLight2D = torch_light as PointLight2D
+		if light.has_meta("flicker"):
+			var old: Tween = light.get_meta("flicker")
+			if old != null and old.is_valid():
+				old.kill()
+			light.remove_meta("flicker")
+		var tween: Tween = light.create_tween()
+		tween.tween_property(light, "energy", 1.65 if lit else 0.0, 1.4)
+		if lit:
+			tween.tween_callback(func() -> void:
+				var flicker: Tween = light.create_tween().set_loops()
+				flicker.tween_property(light, "energy", 1.35, randf_range(0.10, 0.22))
+				flicker.tween_property(light, "energy", 1.65, randf_range(0.10, 0.22))
+				light.set_meta("flicker", flicker))
+	for glow: Node in get_tree().get_nodes_in_group("torch_glow"):
+		if glow is CanvasItem:
+			var tween: Tween = (glow as CanvasItem).create_tween()
+			tween.tween_property(glow, "modulate:a", 0.85 if lit else 0.0, 1.4)
+
+
+func _apply_night_decor(night: bool) -> void:
+	if _fireflies != null:
+		_fireflies.emitting = night
+	for butterfly: Node2D in _butterflies:
+		if is_instance_valid(butterfly):
+			var tween: Tween = butterfly.create_tween()
+			tween.tween_property(butterfly, "modulate:a", 0.0 if night else 1.0, 2.0)
+	for ray: Polygon2D in _rays:
+		if is_instance_valid(ray):
+			ray.color = (
+				Color(0.72, 0.80, 1.0, 0.050) if night else Color(1.0, 0.95, 0.72, 0.075)
+			)
+	if _clouds != null:
+		_clouds.modulate.a = 1.35 if night else 1.0
 
 
 ## Scenes override this to build their geometry and content.
@@ -85,7 +148,7 @@ func _setup_area() -> void:
 
 func _build_common() -> void:
 	player = PlayerAvatar.new()
-	player.z_index = 10
+	player.z_index = SORT_Z
 	add_child(player)
 	player.position = _spawn_position()
 	player.stepped.connect(_on_player_stepped)
@@ -106,8 +169,9 @@ func _build_common() -> void:
 	player.add_child(camera)
 	camera.make_current()
 
-	# UI rides a CanvasLayer so it stays put while the camera roams.
+	# UI rides a CanvasLayer ABOVE the postfx lens so it stays crisp.
 	_hud_layer = CanvasLayer.new()
+	_hud_layer.layer = 80
 	add_child(_hud_layer)
 
 	_prompt = Label.new()
@@ -135,7 +199,7 @@ func _build_common() -> void:
 	dialog_stack.add_child(_choice_box)
 
 	var title: Label = Label.new()
-	title.text = area_name + "      ·      [C] party"
+	title.text = area_name + "      ·      [C] menu"
 	title.add_theme_font_size_override("font_size", 18)
 	title.modulate = Color(0.85, 0.85, 0.9)
 	title.position = Vector2(16, 10)
@@ -174,18 +238,43 @@ func add_wall(rect: Rect2) -> void:
 	add_child(wall)
 
 
+## A sprite prop on the walkable plane, anchored at its FEET so Y-sorting
+## reads true: stand above it -> you vanish behind it; below -> you're in front.
+## `pos` stays the visual CENTER (back-compatible with the old call sites).
+func add_prop(
+	prop_name: String, pos: Vector2, prop_scale: float = 2.0,
+	solid: bool = true, sway: bool = false
+) -> Node2D:
+	var art: Texture2D = AssetLibrary.texture("props", prop_name)
+	if art == null:
+		return null
+	var half_height: float = art.get_size().y * prop_scale / 2.0
+	var anchor: Node2D = Node2D.new()
+	anchor.position = pos + Vector2(0.0, half_height - 8.0)
+	anchor.z_index = SORT_Z
+	var sprite: Sprite2D = Sprite2D.new()
+	sprite.texture = art
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(prop_scale, prop_scale)
+	sprite.position = Vector2(0.0, -(half_height - 8.0))
+	if sway:
+		sprite.material = AssetLibrary.foliage_material()
+	anchor.add_child(sprite)
+	add_child(anchor)
+	if solid:
+		var size: Vector2 = art.get_size() * prop_scale
+		# Collide with the trunk/base band, not the crown — you can walk behind.
+		var body: Vector2 = Vector2(size.x * 0.62, size.y * 0.30)
+		add_wall(Rect2(pos + Vector2(-body.x / 2.0, size.y / 2.0 - body.y), body))
+	return anchor
+
+
 ## Solid scenery: a colored block the player collides with.
-func add_building(rect: Rect2, color: Color, label_text: String = "") -> void:
+func add_building(rect: Rect2, color: Color, _label_text: String = "") -> void:
+	# (Building names live on the minimap now, not floating in the world.)
 	add_rect(rect, color, 2)
 	add_wall(rect)
 	add_occluder(rect)
-	if label_text != "":
-		var sign_label: Label = Label.new()
-		sign_label.text = label_text
-		sign_label.add_theme_font_size_override("font_size", 13)
-		sign_label.position = rect.position + Vector2(6, -22)
-		sign_label.z_index = 3
-		add_child(sign_label)
 
 
 ## Sun-shadow caster matching a solid's footprint.
@@ -254,52 +343,138 @@ func add_snowfall(amount: int = 300) -> void:
 	add_child(snow)
 
 
-## A standing torch that lights itself when night falls (group: torch_light).
+## A standing torch on a stone base; ignites itself when night falls.
 func add_torch(pos: Vector2) -> void:
 	var torch: Node2D = Node2D.new()
-	torch.position = pos
-	torch.z_index = 4
+	torch.position = pos + Vector2(0, 14)  # foot anchor for the y-sort
+	torch.z_index = SORT_Z
 	torch.draw.connect(func() -> void:
-		torch.draw_rect(Rect2(-3, -8, 6, 30), Color(0.32, 0.22, 0.14))
-		torch.draw_circle(Vector2(0, -14), 7.0, Color(1.0, 0.62, 0.18))
-		torch.draw_circle(Vector2(0, -18), 4.0, Color(1.0, 0.85, 0.4)))
+		# Stone footing, iron-banded pole, head basket.
+		torch.draw_circle(Vector2(-7, 12), 6.0, Color(0.42, 0.43, 0.47))
+		torch.draw_circle(Vector2(7, 12), 6.0, Color(0.38, 0.39, 0.43))
+		torch.draw_circle(Vector2(0, 14), 7.0, Color(0.46, 0.47, 0.51))
+		torch.draw_rect(Rect2(-3, -26, 6, 40), Color(0.30, 0.21, 0.13))
+		torch.draw_rect(Rect2(-4, -6, 8, 3), Color(0.2, 0.2, 0.24))
+		torch.draw_rect(Rect2(-6, -30, 12, 6), Color(0.25, 0.25, 0.3))
+		torch.draw_circle(Vector2(0, -32), 7.5, Color(1.0, 0.58, 0.14))
+		torch.draw_circle(Vector2(0, -36), 4.5, Color(1.0, 0.86, 0.42)))
 	add_child(torch)
 	var embers: CPUParticles2D = CPUParticles2D.new()
-	embers.position = Vector2(0, -16)
-	embers.amount = 6
-	embers.lifetime = 0.9
-	embers.gravity = Vector2(0, -70)
-	embers.initial_velocity_min = 4.0
-	embers.initial_velocity_max = 14.0
+	embers.position = Vector2(0, -34)
+	embers.amount = 14
+	embers.lifetime = 1.1
+	embers.spread = 16.0
+	embers.direction = Vector2(0, -1)
+	embers.gravity = Vector2(0, -85)
+	embers.initial_velocity_min = 6.0
+	embers.initial_velocity_max = 22.0
 	embers.scale_amount_min = 1.0
-	embers.scale_amount_max = 2.0
-	embers.color = Color(1.0, 0.7, 0.25, 0.8)
+	embers.scale_amount_max = 2.4
+	embers.color = Color(1.0, 0.7, 0.25, 0.85)
 	torch.add_child(embers)
+	# Warm halo sprite (additive) that breathes in when lit.
+	var halo: Sprite2D = Sprite2D.new()
+	halo.texture = load("res://assets/sprites/ui/light_radial.png")
+	halo.position = Vector2(0, -33)
+	halo.scale = Vector2(0.30, 0.30)
+	halo.modulate = Color(1.0, 0.62, 0.22, 0.0)
+	var halo_material: CanvasItemMaterial = CanvasItemMaterial.new()
+	halo_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	halo.material = halo_material
+	halo.add_to_group("torch_glow")
+	torch.add_child(halo)
 	var light: PointLight2D = PointLight2D.new()
 	light.texture = load("res://assets/sprites/ui/light_radial.png")
-	light.position = Vector2(0, -14)
-	light.color = Color(1.0, 0.68, 0.3)
+	light.position = Vector2(0, -32)
+	light.color = Color(1.0, 0.66, 0.27)
 	light.energy = 0.0  # dawn state; night ignites it
-	light.texture_scale = 1.2
+	light.texture_scale = 1.55
 	light.shadow_enabled = true
 	light.add_to_group("torch_light")
 	torch.add_child(light)
 
 
+## A wooden waypost gate framing the road (cosmetic, walk straight through).
+func add_road_gate(center: Vector2, width: float = 150.0) -> void:
+	var art: Texture2D = AssetLibrary.texture("props", "posts")
+	for side: float in [-1.0, 1.0]:
+		var x: float = center.x + side * width / 2.0
+		if art != null:
+			add_prop("posts", Vector2(x, center.y), 1.8, false)
+		else:
+			add_rect(Rect2(x - 5, center.y - 40, 10, 80), Color(0.4, 0.3, 0.2), SORT_Z)
+	var beam: Node2D = Node2D.new()
+	beam.position = center + Vector2(0, 36)
+	beam.z_index = SORT_Z
+	beam.draw.connect(func() -> void:
+		beam.draw_rect(Rect2(-width / 2.0 - 10.0, -98.0, width + 20.0, 9.0), Color(0.33, 0.24, 0.15))
+		beam.draw_rect(Rect2(-width / 2.0 - 10.0, -90.0, width + 20.0, 3.0), Color(0.22, 0.16, 0.10)))
+	add_child(beam)
+
+
+## A tiled sandstone-cobble road strip (falls back to a flat color band).
+func add_cobble_road(rect: Rect2, vertical: bool = false) -> void:
+	var art: Texture2D = AssetLibrary.texture("props", "cobble_v" if vertical else "cobble_h")
+	if art == null:
+		add_rect(rect, Color(0.52, 0.44, 0.32, 0.9), -8)
+		return
+	var road: TextureRect = TextureRect.new()
+	road.texture = art
+	road.stretch_mode = TextureRect.STRETCH_TILE
+	road.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	road.position = rect.position
+	road.size = rect.size / 2.0
+	road.scale = Vector2(2.0, 2.0)
+	road.z_index = -8
+	road.modulate = Color(0.96, 0.93, 0.88)
+	add_child(road)
+
+
 ## Shared save crystal: drain Darkness, restore Resolve, ease Burden, save.
 func add_save_crystal(pos: Vector2) -> void:
+	_save_points.append(pos)
 	var crystal: Polygon2D = Polygon2D.new()
 	crystal.polygon = PackedVector2Array([
 		Vector2(0, -34), Vector2(14, 0), Vector2(0, 34), Vector2(-14, 0)
 	])
 	crystal.color = Color(0.45, 0.95, 1.0)
 	crystal.position = pos
-	crystal.z_index = 3
+	crystal.z_index = SORT_Z
 	add_child(crystal)
 	var pulse: Tween = crystal.create_tween().set_loops()
 	pulse.tween_property(crystal, "modulate:a", 0.55, 0.9)
 	pulse.tween_property(crystal, "modulate:a", 1.0, 0.9)
-	add_point_light(pos, Color(0.5, 0.95, 1.0), 1.6, 1.2)
+	# A reaching beam of pale light + drifting motes: you can find it across the map.
+	var beam: Sprite2D = Sprite2D.new()
+	beam.texture = load("res://assets/sprites/ui/light_radial.png")
+	beam.position = pos + Vector2(0, -130)
+	beam.scale = Vector2(0.22, 1.6)
+	beam.modulate = Color(0.55, 0.95, 1.0, 0.20)
+	var beam_material: CanvasItemMaterial = CanvasItemMaterial.new()
+	beam_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	beam.material = beam_material
+	beam.z_index = SORT_Z
+	add_child(beam)
+	var beam_pulse: Tween = beam.create_tween().set_loops()
+	beam_pulse.tween_property(beam, "modulate:a", 0.10, 1.6)
+	beam_pulse.tween_property(beam, "modulate:a", 0.24, 1.6)
+	var motes: CPUParticles2D = CPUParticles2D.new()
+	motes.position = pos
+	motes.amount = 14
+	motes.lifetime = 2.4
+	motes.preprocess = 2.0
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	motes.emission_sphere_radius = 26.0
+	motes.direction = Vector2(0, -1)
+	motes.gravity = Vector2(0, -42)
+	motes.initial_velocity_min = 4.0
+	motes.initial_velocity_max = 16.0
+	motes.scale_amount_min = 1.2
+	motes.scale_amount_max = 2.2
+	motes.color = Color(0.6, 0.97, 1.0, 0.8)
+	motes.z_index = SORT_Z
+	add_child(motes)
+	add_point_light(pos, Color(0.5, 0.95, 1.0), 2.1, 1.55)
 	add_interactable(pos, "Rest at the save crystal", func() -> void:
 		var world: Node = get_node_or_null("/root/WorldState")
 		if world == null or not world.in_world_run:
@@ -343,7 +518,7 @@ func add_flowers(positions: Array, seed_value: int = 11) -> void:
 func add_chicken(home: Vector2) -> void:
 	var hen: Node2D = Node2D.new()
 	hen.position = home
-	hen.z_index = 5
+	hen.z_index = SORT_Z
 	hen.draw.connect(func() -> void:
 		hen.draw_circle(Vector2.ZERO, 7.0, Color(0.96, 0.95, 0.9))
 		hen.draw_circle(Vector2(5, -5), 4.0, Color(0.96, 0.95, 0.9))
@@ -363,6 +538,7 @@ func add_chicken(home: Vector2) -> void:
 
 
 func add_exit(rect: Rect2, target_scene: String, spawn_in_target: Vector2) -> void:
+	_exit_rects.append(rect)
 	var zone: Area2D = _make_zone(rect)
 	zone.body_entered.connect(func(body: Node2D) -> void:
 		if body == player:
@@ -441,9 +617,13 @@ func add_chest(chest_id: String, pos: Vector2, loot: Dictionary) -> void:
 	var world: Node = get_node_or_null("/root/WorldState")
 	if world != null and world.opened_chests.has(chest_id):
 		return
-	var art: Texture2D = AssetLibrary.texture("props", "crate")
+	_chest_points.append(pos)
+	var art: Texture2D = AssetLibrary.texture("props", "chest")
+	if art == null:
+		art = AssetLibrary.texture("props", "crate")
 	var chest: Node2D = Node2D.new()
 	chest.position = pos
+	chest.z_index = SORT_Z
 	if art != null:
 		var sprite: Sprite2D = Sprite2D.new()
 		sprite.texture = art
@@ -481,10 +661,10 @@ func add_chest(chest_id: String, pos: Vector2, loot: Dictionary) -> void:
 ## A villager who wanders between waypoints and tosses a one-liner when bumped.
 func add_roamer(
 	roamer_name: String, waypoints: Array[Vector2], lines: Array[String], tint: Color = Color.WHITE
-) -> void:
+) -> Node2D:
 	var roamer: Node2D = Node2D.new()
 	roamer.position = waypoints[0]
-	roamer.z_index = 9
+	roamer.z_index = SORT_Z
 	# Directional walker body (tinted villager); static sprite as fallback.
 	var walker_name: String = (
 		roamer_name if AssetLibrary.walk_frames(roamer_name) != null else "Cavene"
@@ -502,12 +682,15 @@ func add_roamer(
 			roamer.add_child(sprite)
 	add_child(roamer)
 	# Drift between waypoints forever.
-	var tween: Tween = roamer.create_tween().set_loops()
-	for i: int in range(waypoints.size()):
-		var next: Vector2 = waypoints[(i + 1) % waypoints.size()]
-		var hop: Vector2 = waypoints[i]
-		tween.tween_property(roamer, "position", next, maxf(hop.distance_to(next) / 60.0, 0.5))
-		tween.tween_interval(randf_range(0.8, 2.2))
+	if waypoints.size() > 1:
+		var tween: Tween = roamer.create_tween().set_loops()
+		for i: int in range(waypoints.size()):
+			var next: Vector2 = waypoints[(i + 1) % waypoints.size()]
+			var hop: Vector2 = waypoints[i]
+			tween.tween_property(roamer, "position", next, maxf(hop.distance_to(next) / 60.0, 0.5))
+			tween.tween_interval(randf_range(0.8, 2.2))
+	if lines.is_empty():
+		return roamer
 	# Talking zone follows the roamer.
 	var zone: Area2D = Area2D.new()
 	var shape: CollisionShape2D = CollisionShape2D.new()
@@ -530,6 +713,272 @@ func add_roamer(
 		if body == player and _active_interactable.get("area") == zone:
 			_active_interactable = {}
 			_prompt.visible = false)
+	return roamer
+
+
+## --- living vignettes: bubble talk that plays out as you pass -------------------
+
+
+## speakers: [{"node": Node2D, "lines": Array}], cycling random mini-bubbles
+## whenever the player is within `radius` of `center`. No interaction needed —
+## the street just talks around you.
+func add_vignette(center: Vector2, radius: float, speakers: Array) -> void:
+	var timer: Timer = Timer.new()
+	timer.wait_time = randf_range(2.2, 3.6)
+	timer.one_shot = false
+	add_child(timer)
+	timer.timeout.connect(func() -> void:
+		timer.wait_time = randf_range(2.6, 5.0)
+		if player == null or player.position.distance_to(center) > radius:
+			return
+		var speaker: Dictionary = speakers[randi() % speakers.size()]
+		var node: Node2D = speaker["node"]
+		if not is_instance_valid(node):
+			return
+		var lines: Array = speaker["lines"]
+		_pop_bubble(node, String(lines[randi() % lines.size()])))
+	timer.start()
+
+
+func _pop_bubble(above: Node2D, text: String) -> void:
+	var bubble: PanelContainer = PanelContainer.new()
+	bubble.modulate = Color(1, 1, 1, 0.0)
+	bubble.z_index = 30
+	var label: Label = Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 11)
+	bubble.add_child(label)
+	above.add_child(bubble)
+	await get_tree().process_frame  # size settles after layout
+	if not is_instance_valid(bubble):
+		return
+	bubble.position = Vector2(-bubble.size.x / 2.0, -64.0 - bubble.size.y)
+	var tween: Tween = bubble.create_tween()
+	tween.tween_property(bubble, "modulate:a", 1.0, 0.22)
+	tween.tween_interval(1.9)
+	tween.tween_property(bubble, "modulate:a", 0.0, 0.45)
+	tween.tween_callback(bubble.queue_free)
+
+
+## --- sky + ambient life ----------------------------------------------------------
+
+
+## God rays by day, pale moonbeams by night, and cloud shadows crossing the land.
+func _build_sky_layer() -> void:
+	var ray_material: CanvasItemMaterial = CanvasItemMaterial.new()
+	ray_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 31
+	for i: int in range(4):
+		var ray: Polygon2D = Polygon2D.new()
+		var width: float = rng.randf_range(70.0, 150.0)
+		var length: float = map_size.length() * 0.8
+		ray.polygon = PackedVector2Array([
+			Vector2(0, 0), Vector2(width, 0),
+			Vector2(width + 180.0, length), Vector2(180.0, length),
+		])
+		ray.color = Color(1.0, 0.95, 0.72, 0.075)
+		ray.material = ray_material
+		ray.rotation_degrees = -28.0
+		ray.position = Vector2(rng.randf_range(0.0, map_size.x), -80.0)
+		ray.z_index = 45
+		add_child(ray)
+		_rays.append(ray)
+		var drift: Tween = ray.create_tween().set_loops()
+		var span: float = rng.randf_range(120.0, 260.0)
+		drift.tween_property(ray, "position:x", ray.position.x + span, rng.randf_range(14.0, 26.0))\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.parallel().tween_property(ray, "modulate:a", 0.35, rng.randf_range(7.0, 12.0))\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(ray, "position:x", ray.position.x, rng.randf_range(14.0, 26.0))\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.parallel().tween_property(ray, "modulate:a", 1.0, rng.randf_range(7.0, 12.0))\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Slow cloud shadows: big soft blots sliding over everything below z45.
+	_clouds = Node2D.new()
+	_clouds.z_index = 44
+	add_child(_clouds)
+	for i: int in range(5):
+		var cloud: Node2D = Node2D.new()
+		var seed_value: int = 50 + i * 7
+		cloud.draw.connect(func() -> void:
+			var cloud_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+			cloud_rng.seed = seed_value
+			for blob: int in range(5):
+				cloud.draw_circle(
+					Vector2(cloud_rng.randf_range(-90, 90), cloud_rng.randf_range(-40, 40)),
+					cloud_rng.randf_range(55.0, 110.0),
+					Color(0.05, 0.06, 0.12, 0.075)
+				))
+		cloud.position = Vector2(rng.randf_range(0, map_size.x), rng.randf_range(60, map_size.y - 60))
+		cloud.scale = Vector2(2.2, 1.6)
+		_clouds.add_child(cloud)
+		var cross: Tween = cloud.create_tween().set_loops()
+		var trip: float = rng.randf_range(55.0, 100.0)
+		cross.tween_property(cloud, "position:x", map_size.x + 320.0, trip * (map_size.x - cloud.position.x) / map_size.x)
+		cross.tween_callback(func() -> void: cloud.position.x = -320.0)
+		cross.tween_property(cloud, "position:x", map_size.x + 320.0, trip)
+		cross.tween_callback(func() -> void: cloud.position.x = -320.0)
+
+
+## Dust motes always, butterflies by day, fireflies after dark.
+func _build_ambient_life() -> void:
+	var area_factor: float = map_size.x * map_size.y / (1280.0 * 720.0)
+	# Pollen / dust drifting up through the light (the "pretty stuff" layer).
+	var dust: GPUParticles2D = GPUParticles2D.new()
+	var dust_material: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	dust_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	dust_material.emission_box_extents = Vector3(map_size.x / 2.0, map_size.y / 2.0, 1.0)
+	dust_material.direction = Vector3(0.1, -1.0, 0.0)
+	dust_material.spread = 30.0
+	dust_material.gravity = Vector3(2.0, -7.0, 0.0)
+	dust_material.initial_velocity_min = 2.0
+	dust_material.initial_velocity_max = 9.0
+	dust_material.scale_min = 0.8
+	dust_material.scale_max = 1.7
+	dust_material.color = Color(1.0, 0.97, 0.85, 0.30)
+	dust.process_material = dust_material
+	dust.amount = int(70 * area_factor)
+	dust.lifetime = 9.0
+	dust.preprocess = 9.0
+	dust.position = map_size / 2.0
+	dust.visibility_rect = Rect2(-map_size.x / 2.0, -map_size.y / 2.0, map_size.x, map_size.y)
+	dust.z_index = 40
+	add_child(dust)
+	# Fireflies: blinking embers of green-gold, night only, collision-free.
+	_fireflies = GPUParticles2D.new()
+	var fly_material: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	fly_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	fly_material.emission_box_extents = Vector3(map_size.x / 2.0, map_size.y / 2.0, 1.0)
+	fly_material.gravity = Vector3.ZERO
+	fly_material.initial_velocity_min = 6.0
+	fly_material.initial_velocity_max = 18.0
+	fly_material.spread = 180.0
+	fly_material.direction = Vector3(1, 0, 0)
+	fly_material.scale_min = 1.2
+	fly_material.scale_max = 2.0
+	var blink: Gradient = Gradient.new()
+	blink.set_color(0, Color(0.78, 1.0, 0.42, 0.0))
+	blink.add_point(0.25, Color(0.78, 1.0, 0.42, 0.9))
+	blink.add_point(0.5, Color(0.65, 0.9, 0.3, 0.05))
+	blink.add_point(0.75, Color(0.8, 1.0, 0.5, 0.8))
+	blink.set_color(1, Color(0.78, 1.0, 0.42, 0.0))
+	var blink_texture: GradientTexture1D = GradientTexture1D.new()
+	blink_texture.gradient = blink
+	fly_material.color_ramp = blink_texture
+	_fireflies.process_material = fly_material
+	_fireflies.amount = int(46 * area_factor)
+	_fireflies.lifetime = 5.0
+	_fireflies.preprocess = 5.0
+	_fireflies.position = map_size / 2.0
+	_fireflies.visibility_rect = Rect2(
+		-map_size.x / 2.0, -map_size.y / 2.0, map_size.x, map_size.y
+	)
+	_fireflies.z_index = 42
+	_fireflies.emitting = false
+	add_child(_fireflies)
+	# A handful of butterflies on lazy wanders (day only).
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 8
+	for i: int in range(clampi(int(4 * area_factor), 3, 10)):
+		var butterfly: Node2D = Node2D.new()
+		var tint: Color = [
+			Color(0.95, 0.75, 0.3), Color(0.85, 0.85, 0.95), Color(0.9, 0.6, 0.75),
+		][i % 3]
+		var wing: Node2D = Node2D.new()
+		wing.draw.connect(func() -> void:
+			wing.draw_colored_polygon(
+				PackedVector2Array([Vector2(0, 0), Vector2(-6, -5), Vector2(-5, 2)]), tint
+			)
+			wing.draw_colored_polygon(
+				PackedVector2Array([Vector2(0, 0), Vector2(6, -5), Vector2(5, 2)]), tint
+			)
+			wing.draw_rect(Rect2(-0.7, -2.5, 1.4, 5.0), Color(0.25, 0.2, 0.2)))
+		butterfly.add_child(wing)
+		var flap: Tween = wing.create_tween().set_loops()
+		flap.tween_property(wing, "scale:x", 0.35, 0.09)
+		flap.tween_property(wing, "scale:x", 1.0, 0.09)
+		butterfly.position = Vector2(
+			rng.randf_range(100, map_size.x - 100), rng.randf_range(100, map_size.y - 100)
+		)
+		butterfly.z_index = 41
+		add_child(butterfly)
+		_butterflies.append(butterfly)
+		var wander: Tween = butterfly.create_tween().set_loops()
+		for hop: int in range(4):
+			wander.tween_property(
+				butterfly, "position",
+				butterfly.position + Vector2(rng.randf_range(-160, 160), rng.randf_range(-110, 110)),
+				rng.randf_range(2.0, 4.0)
+			).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			wander.tween_interval(rng.randf_range(0.4, 1.4))
+		wander.tween_property(butterfly, "position", butterfly.position, 3.0)\
+			.set_trans(Tween.TRANS_SINE)
+
+
+## --- the corner minimap -----------------------------------------------------------
+
+
+func _build_minimap() -> void:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.position = Vector2(1052, 8)
+	_hud_layer.add_child(panel)
+	var stack: VBoxContainer = VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 4)
+	panel.add_child(stack)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	stack.add_child(head)
+	var face: TextureRect = TextureRect.new()
+	var art: Texture2D = AssetLibrary.texture("characters", "Bastil")
+	if art != null:
+		face.texture = art
+		face.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		face.custom_minimum_size = Vector2(34, 46)
+		face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	head.add_child(face)
+	var names: VBoxContainer = VBoxContainer.new()
+	head.add_child(names)
+	var who: Label = Label.new()
+	who.text = "BASTIL"
+	who.add_theme_font_size_override("font_size", 13)
+	names.add_child(who)
+	var where: Label = Label.new()
+	where.text = area_name.split("—")[0].strip_edges()
+	where.add_theme_font_size_override("font_size", 10)
+	where.modulate = Color(0.75, 0.73, 0.65)
+	names.add_child(where)
+	_minimap = Control.new()
+	_minimap.custom_minimum_size = Vector2(176, 176.0 * map_size.y / map_size.x)
+	stack.add_child(_minimap)
+	_minimap.draw.connect(_draw_minimap)
+
+
+func _draw_minimap() -> void:
+	var size: Vector2 = _minimap.size
+	var scale_factor: float = size.x / map_size.x
+	_minimap.draw_rect(Rect2(Vector2.ZERO, size), Color(0.07, 0.08, 0.10, 0.85))
+	_minimap.draw_rect(Rect2(Vector2.ZERO, size), Color(0.55, 0.5, 0.4, 0.8), false, 1.5)
+	for exit_rect: Rect2 in _exit_rects:
+		_minimap.draw_rect(
+			Rect2(exit_rect.position * scale_factor, (exit_rect.size * scale_factor).max(Vector2(3, 3))),
+			Color(0.95, 0.9, 0.4, 0.9)
+		)
+	for save_pos: Vector2 in _save_points:
+		_minimap.draw_circle(save_pos * scale_factor, 3.0, Color(0.45, 0.95, 1.0))
+	for chest_pos: Vector2 in _chest_points:
+		_minimap.draw_circle(chest_pos * scale_factor, 2.0, Color(0.85, 0.65, 0.3))
+	for foe: Node in get_tree().get_nodes_in_group("overworld_foe"):
+		if foe is Node2D:
+			_minimap.draw_circle((foe as Node2D).position * scale_factor, 2.4, Color(0.9, 0.3, 0.25))
+	if player != null:
+		_minimap.draw_circle(player.position * scale_factor, 3.2, Color(1.0, 0.85, 0.25))
+		_minimap.draw_circle(player.position * scale_factor, 5.0, Color(1.0, 0.85, 0.25, 0.35))
+
+
+func _process(_delta: float) -> void:
+	if _minimap != null:
+		_minimap.queue_redraw()
 
 
 func _advance_dialog() -> void:
