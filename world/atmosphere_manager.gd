@@ -1,4 +1,6 @@
 extends Node
+
+signal night_changed(now_night: bool)
 ## Autoload: the living sky. Tracks time-of-day (advancing while you walk the
 ## world), grades the whole palette through warm dawn -> clear noon -> bruised
 ## purple dusk -> deep blue night, and drives each area's sun (a shadow-casting
@@ -22,6 +24,7 @@ const GRADE_KEYS: Array = [
 
 var hour: float = 10.0
 var advancing: bool = false  # areas turn this on; battles/menus freeze time
+var _was_night: bool = false
 
 var _modulates: Array[CanvasModulate] = []
 var _suns: Array[DirectionalLight2D] = []
@@ -32,6 +35,9 @@ func _process(delta: float) -> void:
 		return
 	hour = fmod(hour + delta * 24.0 / (DAY_LENGTH_MINUTES * 60.0), 24.0)
 	_apply_grade()
+	if is_night() != _was_night:
+		_was_night = is_night()
+		night_changed.emit(_was_night)
 
 
 ## Pure + testable: the palette for any hour.

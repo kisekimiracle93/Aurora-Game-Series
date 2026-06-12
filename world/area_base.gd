@@ -11,6 +11,8 @@ var area_name: String = ""
 var music_track: String = ""
 ## Maps larger than the screen get a follow camera clamped to these bounds.
 var map_size: Vector2 = Vector2(1280, 720)
+## Interiors opt out so popping into a house doesn't smudge the travel trail.
+var tracks_on_map: bool = true
 
 ## Random encounters (outside area): rolls a battle every N walked pixels.
 var encounters_enabled: bool = false
@@ -33,17 +35,47 @@ var fog_level: float = 0.0
 func _ready() -> void:
 	_build_common()
 	_setup_area()  # scenes override
-	if music_track != "":
-		var music: Node = get_node_or_null("/root/MusicManager")
-		if music != null:
-			music.play_track(music_track)
+	var world: Node = get_node_or_null("/root/WorldState")
+	if world != null and tracks_on_map:
+		world.note_area_visit(scene_file_path)
 	var atmosphere: Node = get_node_or_null("/root/Atmosphere")
 	if atmosphere != null:
 		atmosphere.apply_to_area(self)
+		atmosphere.night_changed.connect(_on_night_changed)
+	_play_area_music()
 	var postfx: Node = get_node_or_null("/root/PostFX")
 	if postfx != null:
 		postfx.mood_world(frost_level, fog_level)
+	_set_torches_lit(atmosphere != null and atmosphere.is_night())
 	_arm_encounter()
+
+
+## Each area carries a day theme and an optional night variant (<track>_night).
+func _play_area_music() -> void:
+	if music_track == "":
+		return
+	var music: Node = get_node_or_null("/root/MusicManager")
+	if music == null:
+		return
+	var atmosphere: Node = get_node_or_null("/root/Atmosphere")
+	var pick: String = music_track
+	if atmosphere != null and atmosphere.is_night():
+		if AssetLibrary.music_stream(music_track + "_night") != null:
+			pick = music_track + "_night"
+	music.play_track(pick)
+
+
+func _on_night_changed(now_night: bool) -> void:
+	_play_area_music()
+	_set_torches_lit(now_night)
+
+
+func _set_torches_lit(lit: bool) -> void:
+	for torch_light: Node in get_tree().get_nodes_in_group("torch_light"):
+		if not torch_light is PointLight2D:
+			continue
+		var tween: Tween = (torch_light as PointLight2D).create_tween()
+		tween.tween_property(torch_light, "energy", 1.15 if lit else 0.0, 1.4)
 
 
 ## Scenes override this to build their geometry and content.
@@ -220,6 +252,114 @@ func add_snowfall(amount: int = 300) -> void:
 	snow.visibility_rect = Rect2(-map_size.x / 2.0, -40.0, map_size.x, map_size.y + 80.0)
 	snow.z_index = 50
 	add_child(snow)
+
+
+## A standing torch that lights itself when night falls (group: torch_light).
+func add_torch(pos: Vector2) -> void:
+	var torch: Node2D = Node2D.new()
+	torch.position = pos
+	torch.z_index = 4
+	torch.draw.connect(func() -> void:
+		torch.draw_rect(Rect2(-3, -8, 6, 30), Color(0.32, 0.22, 0.14))
+		torch.draw_circle(Vector2(0, -14), 7.0, Color(1.0, 0.62, 0.18))
+		torch.draw_circle(Vector2(0, -18), 4.0, Color(1.0, 0.85, 0.4)))
+	add_child(torch)
+	var embers: CPUParticles2D = CPUParticles2D.new()
+	embers.position = Vector2(0, -16)
+	embers.amount = 6
+	embers.lifetime = 0.9
+	embers.gravity = Vector2(0, -70)
+	embers.initial_velocity_min = 4.0
+	embers.initial_velocity_max = 14.0
+	embers.scale_amount_min = 1.0
+	embers.scale_amount_max = 2.0
+	embers.color = Color(1.0, 0.7, 0.25, 0.8)
+	torch.add_child(embers)
+	var light: PointLight2D = PointLight2D.new()
+	light.texture = load("res://assets/sprites/ui/light_radial.png")
+	light.position = Vector2(0, -14)
+	light.color = Color(1.0, 0.68, 0.3)
+	light.energy = 0.0  # dawn state; night ignites it
+	light.texture_scale = 1.2
+	light.shadow_enabled = true
+	light.add_to_group("torch_light")
+	torch.add_child(light)
+
+
+## Shared save crystal: drain Darkness, restore Resolve, ease Burden, save.
+func add_save_crystal(pos: Vector2) -> void:
+	var crystal: Polygon2D = Polygon2D.new()
+	crystal.polygon = PackedVector2Array([
+		Vector2(0, -34), Vector2(14, 0), Vector2(0, 34), Vector2(-14, 0)
+	])
+	crystal.color = Color(0.45, 0.95, 1.0)
+	crystal.position = pos
+	crystal.z_index = 3
+	add_child(crystal)
+	var pulse: Tween = crystal.create_tween().set_loops()
+	pulse.tween_property(crystal, "modulate:a", 0.55, 0.9)
+	pulse.tween_property(crystal, "modulate:a", 1.0, 0.9)
+	add_point_light(pos, Color(0.5, 0.95, 1.0), 1.6, 1.2)
+	add_interactable(pos, "Rest at the save crystal", func() -> void:
+		var world: Node = get_node_or_null("/root/WorldState")
+		if world == null or not world.in_world_run:
+			show_dialog(["The crystal hums, but answers no one outside a true journey."])
+			return
+		var result: Error = world.rest_and_save(scene_file_path)
+		var sfx: Node = get_node_or_null("/root/SfxManager")
+		if sfx != null:
+			sfx.play("heal")
+		if result == OK:
+			show_dialog([
+				"You rest beneath the crystal's glow. Darkness drains; Resolve returns; the weight eases.",
+				"Game saved.",
+			])
+		else:
+			show_dialog(["The crystal flickers... saving failed (error %d)." % result]))
+
+
+## A scatter of little drawn wildflowers (life, cheap and cheerful).
+func add_flowers(positions: Array, seed_value: int = 11) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	for pos: Vector2 in positions:
+		var petal_color: Color = [
+			Color(0.95, 0.55, 0.65), Color(0.95, 0.85, 0.4),
+			Color(0.7, 0.6, 0.95), Color(0.95, 0.95, 0.95),
+		][rng.randi_range(0, 3)]
+		var flower: Node2D = Node2D.new()
+		flower.position = pos
+		flower.z_index = 1
+		flower.draw.connect(func() -> void:
+			for angle_index: int in range(4):
+				var angle: float = TAU * float(angle_index) / 4.0
+				flower.draw_circle(Vector2(cos(angle), sin(angle)) * 3.0, 2.6, petal_color)
+			flower.draw_circle(Vector2.ZERO, 2.0, Color(0.95, 0.8, 0.3))
+			flower.draw_rect(Rect2(-0.8, 3.0, 1.6, 6.0), Color(0.25, 0.5, 0.25)))
+		add_child(flower)
+
+
+## A pecking chicken on a little waddle loop. Pure charm, zero mechanics.
+func add_chicken(home: Vector2) -> void:
+	var hen: Node2D = Node2D.new()
+	hen.position = home
+	hen.z_index = 5
+	hen.draw.connect(func() -> void:
+		hen.draw_circle(Vector2.ZERO, 7.0, Color(0.96, 0.95, 0.9))
+		hen.draw_circle(Vector2(5, -5), 4.0, Color(0.96, 0.95, 0.9))
+		hen.draw_circle(Vector2(5.5, -6.5), 1.6, Color(0.85, 0.2, 0.15))
+		hen.draw_rect(Rect2(8.0, -5.5, 3.0, 2.0), Color(0.95, 0.7, 0.2))
+		hen.draw_rect(Rect2(-2.0, 6.0, 1.5, 4.0), Color(0.9, 0.65, 0.2))
+		hen.draw_rect(Rect2(1.5, 6.0, 1.5, 4.0), Color(0.9, 0.65, 0.2)))
+	add_child(hen)
+	var waddle: Tween = hen.create_tween().set_loops()
+	for hop: int in range(3):
+		var target: Vector2 = home + Vector2(randf_range(-70, 70), randf_range(-40, 40))
+		waddle.tween_property(hen, "position", target, randf_range(1.2, 2.4))
+		waddle.tween_property(hen, "rotation_degrees", 8.0, 0.12)
+		waddle.tween_property(hen, "rotation_degrees", 0.0, 0.12)
+		waddle.tween_interval(randf_range(0.5, 1.6))
+	waddle.tween_property(hen, "position", home, 1.5)
 
 
 func add_exit(rect: Rect2, target_scene: String, spawn_in_target: Vector2) -> void:

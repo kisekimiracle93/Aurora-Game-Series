@@ -280,6 +280,7 @@ func _build_playtest_panel() -> void:
 	box.add_child(spots)
 	for spot: Array in [
 		["Town — Aethertown", "res://world/town.tscn"],
+		["Forest — Verdant Pass", "res://world/forest.tscn"],
 		["Outside — Crystal Fields", "res://world/outside.tscn"],
 		["Dungeon — Crystal Site", "res://world/dungeon.tscn"],
 	]:

@@ -10,6 +10,7 @@ func _init() -> void:
 	area_name = "INSIDE"
 	map_size = Vector2(1280, 720)
 	fog_level = 0.02
+	tracks_on_map = false  # a house is still "in town" on the map
 
 
 func _setup_area() -> void:

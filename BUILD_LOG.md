@@ -740,3 +740,57 @@ day/night palette keys (warm dawn / white noon / purple dusk / blue night +
 night classification), all four shaders load, baked light + normal-map
 assets exist, CanvasTexture pairing, PostFX moods + pulse, Atmosphere stage
 grading, battle camera rig wired into the presenter.
+
+---
+
+## World-growth pass (owner-directed): the road gets long
+
+Owner corrections + expansion list, all landed:
+
+- **Hit-stop fixed to spec**: "3 FRAME pause, not 3 seconds" — constants
+  retuned to 0.05s light / 0.12s heavy / 0.25s echo (ActionPresenter),
+  pinned by a test against 3/60s.
+- **Aethertown doubled** (2560×1600): **Castle Aetherhold** dominates the
+  north — tiled stone keep, three crenellated towers, crimson banners, six
+  lit windows (each with its own light), a dark gate arch with a gatekeeper
+  brush-off ("neither enters Aetherhold"), full collision/occluder/shadow
+  mass. Homes rehoused around it (fisher/widow east, three locked homes, the
+  granary), gate road south, market lane, and a life pass: 16 wildflower
+  clusters, 3 waddling chickens, two new roamers (castle gossip, granary).
+- **NEW area — The Verdant Pass** (`world/forest.gd|tscn`, 3200×2000): the
+  grassland forest between town and the ice. One wide unmissable main road
+  walled by solid treelines; a north branch to the Alpha's clearing
+  (mini-boss pack guarding a fat cache) and a south branch to the smuggler's
+  hollow (cheat cache); two separate eastern passes crossing into the
+  Crystal Fields; ~170 passable deep-woods trees beyond the walls (dense but
+  wanderable, exactly as asked); 4 patrolling foes; 6 road torches; flowers.
+- **Routing**: town east → forest; forest west → town, forest east ×2 →
+  fields; both fields west exits → forest. Main-menu jump-off added.
+- **Torches that light at night**: `add_torch()` (drawn torch + embers +
+  grouped PointLight2D at energy 0); `Atmosphere` gained a `night_changed`
+  signal; areas tween every torch to 1.15 energy at nightfall and back to
+  cold at dawn. Planted: 5 town, 6 forest, 3 fields, 3 dungeon.
+- **Night music per area**: `_play_area_music()` swaps to `<track>_night`
+  when the hour is dark and the manifest binds one — town_night (Canon in D,
+  autoharp), forest_night/world_night (Dark Winds); dungeon keeps its one
+  theme by design. Switches live mid-visit via the same signal.
+- **More save points**: shared `add_save_crystal()` helper (rest = drain
+  Darkness, Resolve floor, ease Burden, save); crystals now in town plaza,
+  the forest road, and the fields approach.
+- **WIP world map**: in the CHARACTER menu (C), press **M** — a surveyor's
+  draft of the four-stop chain with a pulsing "✦ YOU ARE HERE", a
+  "(came from)" marker (WorldState tracks the travel trail; interiors don't
+  smudge it), road connectors, and margin scribbles. Esc/C on the map
+  returns to the party cards, not out — exactly as specified.
+- Dead code swept: town's old private save-crystal builder superseded by
+  the shared helper.
+
+**Test status:** `177/177 passed (1284 asserts)`; boots clean. New coverage
+(`test_world_growth.gd`): 3-frame hit-stop spec, travel trail (current/
+previous/reset, interior opt-out), night-track manifest resolution, live
+day↔night music switching, torch group + night ignition ramp, forest boots
+with player/4 foes/6 torches/save prompt, town boots with castle gate +
+save + 5 torches at 2560×1600, map-chain scenes exist + map page toggle.
+
+**Still parked for M7:** the Memory Echo at the dungeon crystal (per the
+human: "wait for the memory at the dungeon").

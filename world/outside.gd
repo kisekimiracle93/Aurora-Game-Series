@@ -25,14 +25,23 @@ func _setup_area() -> void:
 	add_chest("fields_riverbank", Vector2(1620, 1180), {"item_hp_potion": 1, "item_aether_draught": 1})
 	add_chest("fields_cliffbase", Vector2(2300, 320), {"item_hp_potion": 2})
 
-	# West back to town; far east into the crystal site.
-	add_exit(Rect2(0, 620, 40, 200), "res://world/town.tscn", Vector2(1800, 660))
+	# West: the two Verdant Pass routes home. Far east: the crystal site.
+	add_exit(Rect2(0, 620, 40, 200), "res://world/forest.tscn", Vector2(3060, 700))
+	add_exit(Rect2(0, 1120, 40, 200), "res://world/forest.tscn", Vector2(3060, 1420))
 	add_exit(Rect2(2520, 620, 40, 200), "res://world/dungeon.tscn", Vector2(100, 360))
+	add_save_crystal(Vector2(2380, 900))
+	for torch_pos: Vector2 in [Vector2(700, 620), Vector2(1500, 620), Vector2(2200, 620)]:
+		add_torch(torch_pos)
 	var west: Label = Label.new()
-	west.text = "< Aethertown"
+	west.text = "< The Verdant Pass"
 	west.position = Vector2(50, 590)
 	west.add_theme_font_size_override("font_size", 14)
 	add_child(west)
+	var west2: Label = Label.new()
+	west2.text = "< The Verdant Pass (south)"
+	west2.position = Vector2(50, 1090)
+	west2.add_theme_font_size_override("font_size", 14)
+	add_child(west2)
 	var east: Label = Label.new()
 	east.text = "Crystal site >"
 	east.position = Vector2(2360, 590)

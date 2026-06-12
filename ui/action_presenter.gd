@@ -28,10 +28,11 @@ var overlay_parent: Node  # full-screen flash/X layer (UI level)
 var camera: BattleCamera  # the intelligent rig (optional)
 var banner: DeclarationBanner
 
-## Impact freeze (real seconds; world time crawls at 5%). Tunable weight knobs.
-const HIT_STOP_LIGHT: float = 0.10
-const HIT_STOP_HEAVY: float = 0.26
-const HIT_STOP_ECHO: float = 0.45
+## Impact freeze (real seconds; world time crawls at 5%). Owner spec: a
+## ~3 FRAME pause on normal hits (0.05s @60fps), heavier for the big stuff.
+const HIT_STOP_LIGHT: float = 0.05
+const HIT_STOP_HEAVY: float = 0.12
+const HIT_STOP_ECHO: float = 0.25
 ## Headless runs (tests, CI boots) skip all waits — logic stays synchronous.
 var instant: bool = DisplayServer.get_name() == "headless"
 

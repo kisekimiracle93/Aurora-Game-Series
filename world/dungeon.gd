@@ -82,6 +82,8 @@ func _setup_area() -> void:
 	add_interactable(Vector2(1180, 370), "Enter the Shepherd's arena", _on_boss_door)
 
 	add_chest("dungeon_alcove", Vector2(520, 560), {"item_hp_potion": 2, "item_aether_draught": 1})
+	for torch_pos: Vector2 in [Vector2(200, 300), Vector2(620, 470), Vector2(1000, 300)]:
+		add_torch(torch_pos)
 
 	# Back west to the fields.
 	add_exit(Rect2(0, 300, 40, 150), "res://world/outside.tscn", Vector2(2400, 700))

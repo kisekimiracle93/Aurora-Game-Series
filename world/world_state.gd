@@ -33,6 +33,16 @@ var quests_done: Array = []
 var pending_foe_id: String = ""
 ## Config handed to the generic interior scene on door entry.
 var next_interior: Dictionary = {}
+## Travel trail for the world map: where you are, where you came from.
+var current_area: String = ""
+var previous_area: String = ""
+
+
+func note_area_visit(scene_path: String) -> void:
+	if scene_path == current_area:
+		return
+	previous_area = current_area
+	current_area = scene_path
 
 
 func _ready() -> void:
@@ -58,6 +68,8 @@ func reset_run() -> void:
 	has_return_position = false
 	dungeon_gauntlet_cleared = false
 	boss_cleared = false
+	current_area = ""
+	previous_area = ""
 
 
 ## --- run lifecycle -----------------------------------------------------------
