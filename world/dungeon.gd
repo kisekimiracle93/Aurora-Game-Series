@@ -97,12 +97,59 @@ func _setup_area() -> void:
 	var pulse: Tween = crystal.create_tween().set_loops()
 	pulse.tween_property(crystal, "modulate:a", 0.5, 1.2)
 	pulse.tween_property(crystal, "modulate:a", 1.0, 1.2)
-	add_point_light(Vector2(640, 360), Color(0.78, 0.55, 1.0), 1.7, 1.15)
+	var memory_light: PointLight2D = add_point_light(
+		Vector2(640, 360), Color(0.78, 0.55, 1.0), 1.7, 1.15
+	)
 	add_interactable(Vector2(640, 360), "Touch the memory crystal", func() -> void:
+		var state: Node = get_node_or_null("/root/WorldState")
+		if state == null or not state.in_world_run:
+			show_dialog(["The crystal stirs, but memories open only for true pilgrims."])
+			return
+		if state.quests_done.has("memory_echo"):
+			show_dialog([
+				"The crystal is quiet now. What it held, you carry.",
+				"Somewhere behind your ribs, salt wind.",
+			])
+			return
+		state.quests_done.append("memory_echo")
+		# The flare: the chamber holds its breath while the memory opens.
+		var sfx: Node = get_node_or_null("/root/SfxManager")
+		if sfx != null:
+			sfx.play("echo")
+		var music: Node = get_node_or_null("/root/MusicManager")
+		if music != null and music.has_method("duck"):
+			music.duck(-7.0, 9.0)
+		var flare: Tween = create_tween()
+		flare.tween_property(memory_light, "energy", 3.2, 0.5)
+		flare.tween_property(memory_light, "energy", 1.15, 2.5)
+		var wash: ColorRect = add_rect(Rect2(0, 0, 1280, 720), Color(0.8, 0.65, 1.0, 0.0), 49)
+		var wash_tween: Tween = wash.create_tween()
+		wash_tween.tween_property(wash, "color:a", 0.45, 0.4)
+		wash_tween.tween_property(wash, "color:a", 0.0, 2.2)
+		wash_tween.tween_callback(wash.queue_free)
 		show_dialog([
-			"The crystal stirs. Voices older than the ice press against your mind...",
-			"...but the memory will not open. Not yet. (Memory Echo arrives with M7.)",
-		]))
+			"The crystal seizes your hand. The chamber disappears.",
+			"— bells, wrong before dawn. Honey wine nobody asked for. A rooftop oath under a red sky: 'By Selene's Light, we hold.' —",
+			"— bronze doors that do not break, but CEASE. A shoulder slamming you aside. Three streaks of yellow-black fire where you stood. —",
+			"Phi, grinning through the ruin of it: 'Saved you. Wasn't so bad.' ... 'Never even tasted the ocean.'",
+			"And beneath the memory, something vast and sleeping turns — notices you — and presses one warm thought into your palm before the dark returns.",
+			"MEMORY ECHO UNLOCKED — Bastil remembers: ECHO: THE PROMISED OCEAN.",
+			"(With a full Echo gauge, Phi's gift mends and emboldens the whole party.)",
+		])
+		var afterthought: Timer = Timer.new()
+		afterthought.wait_time = 2.5
+		afterthought.one_shot = true
+		afterthought.timeout.connect(func() -> void:
+			party_quip("Tarnaie", "...I felt her. Under the memory. Sleeping. I FELT her—")
+			var second: Timer = Timer.new()
+			second.wait_time = 5.0
+			second.one_shot = true
+			second.timeout.connect(func() -> void:
+				party_quip("Cavene", "Whatever you two just touched — the Shepherd's door is still ahead. Carry it carefully."))
+			add_child(second)
+			second.start())
+		add_child(afterthought)
+		afterthought.start())
 
 	# Zone 3: the boss door.
 	var door: ColorRect = add_rect(Rect2(1150, 300, 60, 140), Color(0.55, 0.8, 0.95, 0.9), 3)
@@ -122,7 +169,8 @@ func _setup_area() -> void:
 	if world != null and world.get("boss_cleared"):
 		show_dialog([
 			"The arena lies silent. The Shepherd's stillness is broken.",
-			"THE SLICE IS COMPLETE — thank you for playing this far. (M7 polish remains.)",
+			"THE VERTICAL SLICE IS COMPLETE — M0 through M7, every milestone walked.",
+			"Thank you for playing. The road goes on from here... in the full game.",
 		])
 
 

@@ -174,7 +174,7 @@ func _build_title() -> void:
 	add_child(title)
 
 	var subtitle: Label = Label.new()
-	subtitle.text = "—  Part I of the Aurora Series  —"
+	subtitle.text = "—  Part I of the Aurora Series  ·  Vertical Slice, M7 complete  —"
 	subtitle.add_theme_font_size_override("font_size", 20)
 	subtitle.modulate = Color(0.75, 0.85, 0.8)
 	subtitle.position = Vector2(0, 246)

@@ -291,9 +291,12 @@ HOW TO PLAY — the world
 Move: WASD / arrows / left stick.    Interact: E / Enter / gamepad A.
 Menu: C / gamepad Y.    World map: M (inside the menu).
 Run: G toggles a sprint.    Lantern: T raises a warm light for the night.
+Lead: Tab cycles who walks point (any of the five pilgrims).
 Save crystals: rest to drain Darkness, lift Resolve, ease Burden — and save.
 Foes patrol in the open: they chase only so far before returning. Pick your
 fights — or run past them.
+Selenora's gate opens only after FIVE farewells — talk to the town before
+the road. And at Crystal Site II, the memory crystal holds a lost Echo.
 
 HOW TO PLAY — battle
 Turn order runs on speed (the timeline shows who's next). Arrows / stick

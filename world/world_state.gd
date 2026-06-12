@@ -48,6 +48,21 @@ var current_area: String = ""
 var previous_area: String = ""
 ## Permanent max-HP blessings from the relics (name -> bonus HP this run).
 var hp_blessings: Dictionary = {}
+## Who we said goodbye to before the first gate (unique NPC ids).
+var farewell_ids: Array = []
+## How many farewells Selenora asks for before the road opens.
+const FAREWELLS_NEEDED: int = 5
+
+
+## Returns the running count; each soul counts once.
+func note_farewell(npc_id: String) -> int:
+	if npc_id != "" and not farewell_ids.has(npc_id):
+		farewell_ids.append(npc_id)
+	return farewell_ids.size()
+
+
+func farewells_done() -> bool:
+	return farewell_ids.size() >= FAREWELLS_NEEDED
 ## Hoarfang's hoard taken: the party rises — and the Shepherd rises to match.
 var hoard_blessing: bool = false
 
@@ -97,6 +112,7 @@ func reset_run() -> void:
 	previous_area = ""
 	hp_blessings = {}
 	hoard_blessing = false
+	farewell_ids = []
 
 
 ## --- run lifecycle -----------------------------------------------------------

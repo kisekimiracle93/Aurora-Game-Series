@@ -1097,3 +1097,47 @@ content, Selenora rename + >45 interactables + thinker/talker prompts +
 map label + menu card.
 
 **Still parked for M7:** the Memory Echo at the dungeon crystal.
+
+---
+
+## M7 — THE FINAL MILESTONE: the Memory Echo, and five farewells
+
+The last parked milestone, unparked on the owner's word ("push to the end
+here"). The slice now runs M0 through M7, complete.
+
+- **The Memory Echo** (Crystal Site II, the memory chamber): touching the
+  crystal as a true pilgrim plays the memory — the wrong bells, the honey
+  wine, the rooftop oath, the doors that CEASED, and Phi: "Saved you.
+  Wasn't so bad. ... Never even tasted the ocean." Beneath it, something
+  vast and sleeping notices (Tarnaie's quip afterward: "...I felt her.").
+  Light flare, violet screen wash, music ducked nine seconds, then the
+  unlock: **ECHO: THE PROMISED OCEAN** — Bastil's second echo, a full-gauge
+  party-wide mend (+heal coeff 4.5 off focus) + Resolve +14, with its own
+  synthesized ocean-wave voice and the use line "Taste it, Phi. We brought
+  the ocean to you." The unlock rides quests_done, so it persists through
+  save/load and the crystal stays quiet ever after.
+- **The farewell gate** (owner spec): a cross-braced HOLD bar blocks
+  Selenora's east road on a fresh run. Two minutes in, Tarnaie sets the
+  task ("talk to people, Bas. Five souls, at least — it's our last chance
+  to say goodbye"), Cavene seconds it if you dawdle. A "Farewells n/5"
+  counter rides under the minimap; every unique soul you talk to (or read)
+  counts via the new `someone_talked` signal. At three, Mati marks the
+  moment; at five, Cavene calls the road ("we're ready — to the east
+  gate"), the bar fades, and ONLY THEN can the Gate Warden's test trigger.
+  Progress is per-run (WorldState.farewell_ids) and skipped entirely once
+  the Warden is beaten.
+- Final polish: title screen stamped "Vertical Slice, M7 complete"; the
+  game guide teaches Tab lead-swap, the farewell rule, and the memory
+  crystal; the post-boss dungeon line now closes the slice properly
+  ("M0 through M7, every milestone walked").
+
+**Test status:** `213/213 passed (1714 asserts)`; boots clean; farewell
+gate verified in a rendered frame. New coverage (`test_m7_finale.gd`):
+the Promised Ocean is a true echo (gauge-gated, healing, party-wide,
+plan-range CT, Phi named), unlock grants it to Bastil in world battles and
+ONLY after the crystal, unlock survives the save file, farewells count
+unique souls and reset per run, the town holds the gate before five
+goodbyes and opens after, talking emits the farewell signal.
+
+THE VERTICAL SLICE IS COMPLETE: M0–M7, plus every owner-directed pass
+(art, 2D-HD, cinematics, depth loop, Selenora's voice) on top.

@@ -720,6 +720,11 @@ func add_chest(chest_id: String, pos: Vector2, loot: Dictionary) -> void:
 		show_dialog(lines))
 
 
+## Fired whenever the player actually talks to (or reads) a named soul —
+## the farewell gate counts these.
+signal someone_talked(npc_id: String)
+
+
 ## A villager who wanders between waypoints and tosses a one-liner when bumped.
 ## `quips`: optional [[party_speaker, line], ...] — the party sometimes answers.
 func add_roamer(
@@ -766,6 +771,7 @@ func add_roamer(
 	var entry: Dictionary = {
 		"area": zone, "prompt": "Talk", "callback": func() -> void:
 			show_dialog([lines[randi() % lines.size()]] as Array[String])
+			someone_talked.emit(roamer_name)
 			maybe_quip(quips),
 	}
 	_interactables.append(entry)
@@ -839,6 +845,7 @@ func add_thinker(
 		var inner: Array[String] = []
 		inner.append("( " + thoughts[randi() % thoughts.size()] + " )")
 		show_dialog(inner)
+		someone_talked.emit(walker_name)
 		maybe_quip(quips))
 
 

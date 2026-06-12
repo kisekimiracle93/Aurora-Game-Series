@@ -518,6 +518,11 @@ func _spawn_party(is_defeat_retry: bool) -> void:
 		var member: BaseCombatant = BaseCombatant.from_character(data)
 		if world_mode and world != null:
 			world.apply_to_member(member)
+			# M7: the memory crystal's gift travels with Bastil for the run.
+			if data.name == "Bastil" and world.quests_done.has("memory_echo"):
+				var ocean: AbilityData = AbilityLibrary.load_ability("echo_promised_ocean")
+				if ocean != null:
+					member.abilities.add_ability(ocean)
 		else:
 			_apply_carried_meters(member, is_defeat_retry)
 		member.position = PARTY_SLOTS[party.size() % PARTY_SLOTS.size()]

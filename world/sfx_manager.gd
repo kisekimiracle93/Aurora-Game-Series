@@ -92,6 +92,12 @@ static func synth_stream(sfx_name: String) -> AudioStreamWAV:
 			return _tone(
 				[[523.0, 0.16], [659.0, 0.16], [784.0, 0.16], [1046.0, 0.24]], 0.22, "sine"
 			)
+		"echo_promised_ocean":
+			# Salt wind and a long wave: noise swell rolling over a deep chord.
+			return _mix([
+				_noise_burst(1.4, 0.22, 2.2),
+				_tone([[196.0, 0.5], [262.0, 0.5], [330.0, 0.6]], 0.16, "sine"),
+			])
 		"cutpurse_slash", "warning_shot":
 			return _noise_burst(0.09, 0.45, 95.0)
 		"hover":

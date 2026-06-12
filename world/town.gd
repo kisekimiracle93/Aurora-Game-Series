@@ -77,6 +77,112 @@ func _setup_area() -> void:
 	gate_label.add_theme_font_size_override("font_size", 14)
 	add_child(gate_label)
 	_build_warden_gate()
+	_build_farewell_gate()
+
+
+## Before the Warden's test comes the FAREWELL: the road doesn't open until
+## you've spoken with five souls of Selenora. Last chance to say goodbye.
+var _farewell_barricade: StaticBody2D
+var _farewell_label: Label
+var _farewell_satisfied: bool = false
+
+
+func _build_farewell_gate() -> void:
+	if _world == null or not _world.in_world_run:
+		return
+	if _world.cleared_foes.has("gate_town_warden") or _world.farewells_done():
+		_farewell_satisfied = true
+		return
+	# A wooden hold-bar across the east road, just shy of the Warden's line.
+	_farewell_barricade = StaticBody2D.new()
+	_farewell_barricade.position = Vector2(3668, 1150)
+	var shape: CollisionShape2D = CollisionShape2D.new()
+	var box: RectangleShape2D = RectangleShape2D.new()
+	box.size = Vector2(18, 260)
+	shape.shape = box
+	_farewell_barricade.add_child(shape)
+	add_child(_farewell_barricade)
+	var bar: Node2D = Node2D.new()
+	bar.position = Vector2(3668, 1150)
+	bar.z_index = SORT_Z
+	bar.draw.connect(func() -> void:
+		for y: float in [-110.0, 110.0]:
+			bar.draw_rect(Rect2(-5, y - 12, 10, 24), Color(0.36, 0.27, 0.17))
+		bar.draw_line(Vector2(-4, -104), Vector2(4, 104), Color(0.45, 0.34, 0.2), 7.0)
+		bar.draw_line(Vector2(4, -104), Vector2(-4, 104), Color(0.4, 0.3, 0.18), 7.0)
+		bar.draw_rect(Rect2(-30, -10, 60, 20), Color(0.55, 0.45, 0.3))
+		bar.draw_rect(Rect2(-28, -8, 56, 16), Color(0.7, 0.62, 0.45)))
+	add_child(bar)
+	var hold_sign: Label = Label.new()
+	hold_sign.text = "HOLD — pilgrimage forms up"
+	hold_sign.add_theme_font_size_override("font_size", 11)
+	hold_sign.modulate = Color(0.85, 0.78, 0.6)
+	hold_sign.position = Vector2(3580, 1280)
+	add_child(hold_sign)
+	bar.set_meta("sign", hold_sign)
+	_farewell_barricade.set_meta("art", bar)
+	# The running count rides under the minimap.
+	_farewell_label = Label.new()
+	_farewell_label.add_theme_font_size_override("font_size", 13)
+	_farewell_label.modulate = Color(0.9, 0.85, 0.7)
+	_farewell_label.position = Vector2(1052, 196)
+	_farewell_label.size = Vector2(220, 40)
+	_hud_layer.add_child(_farewell_label)
+	_refresh_farewell_label()
+	someone_talked.connect(_on_farewell_talk)
+	# Tarnaie sets the task the moment your boots point east.
+	var prompt_timer: Timer = Timer.new()
+	prompt_timer.wait_time = 2.0
+	prompt_timer.one_shot = true
+	prompt_timer.timeout.connect(func() -> void:
+		party_quip("Tarnaie", "Before the gate — talk to people, Bas. Five souls, at least. It's our last chance to say goodbye.")
+		var follow: Timer = Timer.new()
+		follow.wait_time = 5.0
+		follow.one_shot = true
+		follow.timeout.connect(func() -> void:
+			if not _farewell_satisfied:
+				party_quip("Cavene", "She's right. A pilgrimage that can't face its own town has no business facing the dark."))
+		add_child(follow)
+		follow.start())
+	add_child(prompt_timer)
+	prompt_timer.start()
+
+
+func _on_farewell_talk(npc_id: String) -> void:
+	if _farewell_satisfied or _world == null:
+		return
+	var count: int = _world.note_farewell(npc_id)
+	_refresh_farewell_label()
+	if count == 3:
+		party_quip("Mati", "They look at us like we're already a story. Keep going — two more.")
+	if count >= _world.FAREWELLS_NEEDED:
+		_farewell_satisfied = true
+		party_quip("Cavene", "That's enough goodbyes. The road won't wait — we're ready. To the east gate.")
+		var sfx: Node = get_node_or_null("/root/SfxManager")
+		if sfx != null:
+			sfx.play("heal")
+		if _farewell_label != null:
+			var fade: Tween = _farewell_label.create_tween()
+			fade.tween_property(_farewell_label, "modulate:a", 0.0, 1.5)
+			fade.tween_callback(_farewell_label.queue_free)
+		if _farewell_barricade != null and is_instance_valid(_farewell_barricade):
+			var art: Node2D = _farewell_barricade.get_meta("art")
+			if art != null and is_instance_valid(art):
+				var sign_label: Label = art.get_meta("sign")
+				if sign_label != null and is_instance_valid(sign_label):
+					sign_label.queue_free()
+				var drop: Tween = art.create_tween()
+				drop.tween_property(art, "modulate:a", 0.0, 0.8)
+				drop.tween_callback(art.queue_free)
+			_farewell_barricade.queue_free()
+
+
+func _refresh_farewell_label() -> void:
+	if _farewell_label == null or not is_instance_valid(_farewell_label) or _world == null:
+		return
+	_farewell_label.text = "Farewells  %d / %d" % [
+		_world.farewell_ids.size(), _world.FAREWELLS_NEEDED
+	]
 
 
 ## The first forced encounter: nobody leaves until the Warden has seen
