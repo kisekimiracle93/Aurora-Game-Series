@@ -296,6 +296,14 @@ func _start_battle(is_defeat_retry: bool) -> void:
 	encounter.start()
 
 
+## The backdrop spills well past the 1280x720 frame so the free-look pan
+## never reaches the void (overscan covers the camera's reach + a margin).
+const STAGE_X: float = -360.0
+const STAGE_W: float = 2000.0
+const STAGE_Y: float = -300.0
+const STAGE_H: float = 1320.0
+
+
 ## Stage palettes per biome: sky top, horizon glow, ground tint, lip tint.
 const BIOME_LOOKS: Dictionary = {
 	"meadow": [Color(0.45, 0.62, 0.78), Color(0.78, 0.82, 0.70), Color(0.92, 1.0, 0.92), Color(0.85, 0.8, 0.72)],
@@ -313,11 +321,19 @@ func _build_battlefield() -> void:
 	var art: Texture2D = AssetLibrary.texture(
 		"backgrounds", "boss" if roster == "boss" else "battle"
 	)
+	# A deep fill behind everything so even hard pans land on color, not void.
+	var look_base: Array = BIOME_LOOKS.get(biome, BIOME_LOOKS["tundra"])
+	var backfill: ColorRect = ColorRect.new()
+	backfill.color = look_base[0]
+	backfill.position = Vector2(STAGE_X, STAGE_Y)
+	backfill.size = Vector2(STAGE_W, STAGE_H)
+	stage.add_child(backfill)
 	if biome == "cavern" and art != null:
-		# The painted cavern: keep it, but ground the ranks on a rock shelf.
+		# The painted cavern: keep it (overscanned), grounded on a rock shelf.
 		var image: TextureRect = TextureRect.new()
 		image.texture = art
-		image.size = Vector2(1280, 720)
+		image.position = Vector2(STAGE_X, STAGE_Y)
+		image.size = Vector2(STAGE_W, STAGE_H)
 		image.stretch_mode = TextureRect.STRETCH_SCALE
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # pixel-art stretch
@@ -327,7 +343,8 @@ func _build_battlefield() -> void:
 		_build_open_stage(biome)
 	background = ColorRect.new()
 	background.color = Color(PHASE_TINTS[1], 0.35) if (biome == "cavern" and art != null) else Color(PHASE_TINTS[1], 0.12)
-	background.size = Vector2(1280, 720)
+	background.position = Vector2(STAGE_X, STAGE_Y)
+	background.size = Vector2(STAGE_W, STAGE_H)
 	stage.add_child(background)
 
 
@@ -336,41 +353,42 @@ func _build_open_stage(biome: String) -> void:
 	var look: Array = BIOME_LOOKS.get(biome, BIOME_LOOKS["tundra"])
 	var sky: ColorRect = ColorRect.new()
 	sky.color = look[0]
-	sky.size = Vector2(1280, 250)
+	sky.position = Vector2(STAGE_X, STAGE_Y)
+	sky.size = Vector2(STAGE_W, 250.0 - STAGE_Y)
 	stage.add_child(sky)
 	var horizon: ColorRect = ColorRect.new()
 	horizon.color = look[1]
-	horizon.position = Vector2(0, 250)
-	horizon.size = Vector2(1280, 56)
+	horizon.position = Vector2(STAGE_X, 250)
+	horizon.size = Vector2(STAGE_W, 56)
 	stage.add_child(horizon)
-	# Distant scenery row along the horizon.
+	# Distant scenery row along the horizon (spans the overscan width).
 	if biome in ["meadow", "forest"]:
 		var pines: Texture2D = AssetLibrary.texture("props", "pine_cluster")
 		if pines != null:
-			for i: int in range(7):
+			for i: int in range(11):
 				var tree: Sprite2D = Sprite2D.new()
 				tree.texture = pines
 				tree.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 				tree.scale = Vector2(1.4, 1.4)
-				tree.position = Vector2(60 + i * 195, 235)
+				tree.position = Vector2(STAGE_X + 60 + i * 195, 235)
 				tree.modulate = Color(0.45, 0.55, 0.55, 0.9)
 				stage.add_child(tree)
 	else:
 		var cliffs: Texture2D = AssetLibrary.texture("props", "cliff_tall")
 		if cliffs != null:
-			for i: int in range(8):
+			for i: int in range(13):
 				var cliff: Sprite2D = Sprite2D.new()
 				cliff.texture = cliffs
 				cliff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 				cliff.scale = Vector2(1.05, 1.05)
-				cliff.position = Vector2(90 + i * 165, 218)
+				cliff.position = Vector2(STAGE_X + 90 + i * 165, 218)
 				cliff.modulate = Color(0.60, 0.66, 0.84, 0.9)
 				stage.add_child(cliff)
 		# Haze band settles the horizon against the sky.
 		var haze: ColorRect = ColorRect.new()
 		haze.color = Color(look[1], 0.45)
-		haze.position = Vector2(0, 226)
-		haze.size = Vector2(1280, 84)
+		haze.position = Vector2(STAGE_X, 226)
+		haze.size = Vector2(STAGE_W, 84)
 		stage.add_child(haze)
 	_build_ground_shelf(biome, 1.0)
 
@@ -393,8 +411,8 @@ func _build_ground_shelf(biome_name: String, opacity: float) -> void:
 		hewn.stretch_mode = TextureRect.STRETCH_TILE
 		hewn.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		hewn.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		hewn.position = Vector2(0, ground_top)
-		hewn.size = Vector2(640, (720.0 - ground_top) / 2.0)
+		hewn.position = Vector2(STAGE_X, ground_top)
+		hewn.size = Vector2(STAGE_W / 2.0, (STAGE_Y + STAGE_H - ground_top) / 2.0)
 		hewn.scale = Vector2(2.0, 2.0)
 		hewn.modulate = Color(0.42, 0.50, 0.70, maxf(opacity, 0.85))
 		stage.add_child(hewn)
@@ -414,15 +432,15 @@ func _build_ground_shelf(biome_name: String, opacity: float) -> void:
 		turf.stretch_mode = TextureRect.STRETCH_TILE
 		turf.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		turf.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		turf.position = Vector2(0, ground_top)
-		turf.size = Vector2(1280, 720 - ground_top)
+		turf.position = Vector2(STAGE_X, ground_top)
+		turf.size = Vector2(STAGE_W, STAGE_Y + STAGE_H - ground_top)
 		turf.modulate = Color(look[2], opacity)
 		stage.add_child(turf)
 	else:
 		var floor_rect: ColorRect = ColorRect.new()
 		floor_rect.color = Color(look[2] * Color(0.72, 0.78, 0.88), opacity)
-		floor_rect.position = Vector2(0, ground_top)
-		floor_rect.size = Vector2(1280, 720 - ground_top)
+		floor_rect.position = Vector2(STAGE_X, ground_top)
+		floor_rect.size = Vector2(STAGE_W, STAGE_Y + STAGE_H - ground_top)
 		stage.add_child(floor_rect)
 	# Terrace lip: tiled rock edge marking where the platform begins.
 	if rock != null:
@@ -431,8 +449,8 @@ func _build_ground_shelf(biome_name: String, opacity: float) -> void:
 		lip.stretch_mode = TextureRect.STRETCH_TILE
 		lip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		lip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		lip.position = Vector2(0, ground_top - 14.0)
-		lip.size = Vector2(1280, 16)
+		lip.position = Vector2(STAGE_X, ground_top - 14.0)
+		lip.size = Vector2(STAGE_W, 16)
 		lip.scale = Vector2(1.0, 1.8)
 		lip.modulate = Color(look[3], opacity)
 		stage.add_child(lip)

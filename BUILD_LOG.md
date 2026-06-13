@@ -1193,3 +1193,64 @@ loaders + soft-fail, pilot boots with player/camera/DoF/SSAO/fog/torches.
 NEXT (with owner feedback): tune camera framing + model scales from real
 play, convert remaining areas, move battles onto 3D stages, wire the new
 pixel enemy packs into encounters, and put the animation rigs to work.
+
+---
+
+## HD-2D pass II (owner: "go insane with the polish"): the whole world in 3D
+
+Pushed the HD-2D migration from one pilot town to the ENTIRE walkable world,
+plus a cinematic rendering stack and foley — a major step toward the
+Square-Enix-grade target (an ongoing multi-pass effort; this is the jump).
+
+- **Bug fixes from playtest**: Tarnaie rebuilt from a clean sheet block with
+  a priestess white-and-blue recolor — fixes both "only faces left" and
+  "rotates between all characters" (root cause: junk sheet block 3,1).
+  Combat free-look limited to ARROW KEYS + right stick (WASD freed for
+  menus). Battle stages overscanned (STAGE_X/W/Y/H) so camera pans never
+  reveal void — sky, horizon, ground, and lip all spill past the frame.
+- **Full 3D world chain**: hd_selenora → hd_forest → hd_deepwoods →
+  hd_fields → hd_dungeon, each portaling to the next and back, ending at
+  the 2D Shepherd arena. Built on the world3d/ module (HDAssets/HDBase/
+  PlayerAvatar3D) with the KayKit + Quaternius kits:
+  - **Selenora**: castle, towers, church, tavern, market, blacksmith,
+    windmill, watermill, lumbermill, mine, archery range, well, 12 homes,
+    yard clutter, trees, torches, crystal, billboarded pixel NPCs.
+  - **Verdant Pass**: wide cobbled corridor, open tree clumps framing the
+    road (invisible collision walls keep you on the path), bushes/rocks.
+  - **Selinoran Deep**: dark, heavy blue fog, rain ambience, side-band
+    pine walls with a clear central path, the broken stone arch.
+  - **Crystal Fields**: blue-white snow ground, frozen river, rock cliffs,
+    pine stands, ice crystals, GPU snowfall, the hoard nook.
+  - **Crystal Site II**: the dungeon-kit SHOWCASE — tiled hewn-stone floor,
+    walls/pillars/banners/coffins/rubble, nine torches, the violet memory
+    crystal blazing with bloom, the cold-blue boss door.
+- **Cinematic rendering stack** (Forward+):
+  - `hd_cinematic.gdshader` over every 3D view: tilt-shift depth blur (the
+    Octopath diorama signature), filmic vignette, edge chromatic
+    aberration, warm/cool split-tone grade, animated film grain. Tuned
+    from renders (was crushing the frame; now tasteful).
+  - Environment: PhysicalSkyMaterial with a real sun disk, AgX tonemap,
+    SDFGI bounce light, SSAO + SSIL, screen-blend bloom, volumetric fog
+    with GI inject + light shafts, distance fog tying edges to the sky,
+    per-biome sky/sun/fog/saturation mood, soft 4-split sun shadows.
+  - Drifting GPU dust motes; biome weather (snow in the fields).
+  - Diorama camera retuned to frame the bigger models (fov 33, -42° arm,
+    14u back); [Z] still racks the lens.
+- **Foley** (from the uploaded library): looping footsteps under the 3D
+  player (walk vs run), area ambience beds (Rain_Heavy in the Deep, Spooky
+  Ambience in the dungeon).
+- Menu: ten jump-offs — five ★HD-2D areas + the five 2D originals.
+- Project on Forward+ (mobile fallback). 2D game fully intact.
+
+**Test status:** `218/218 passed (1750 asserts)`; all five HD areas
+boot-verified with player + graded environment + cinematic layer; renders
+verified by eye (town diorama, dungeon showcase, snow fields, forest path,
+deep woods) on the GL fallback — SDFGI/SSIL/volumetric fog/AgX/bloom land
+on real Vulkan hardware, so it looks materially better live than my
+software-GL frames.
+
+NEXT (toward AAA): normal-mapped billboards so the cast catches dynamic
+light; per-area NPC density + the lore souls ported in; 3D battle stages;
+the new pixel enemy packs wired to encounters; animated kit characters;
+water shader + reflections; richer props per the owner's "highly detail
+later" note.

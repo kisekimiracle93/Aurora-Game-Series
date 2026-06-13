@@ -279,12 +279,16 @@ func _build_playtest_panel() -> void:
 	spots.modulate = Color(0.7, 0.7, 0.75)
 	box.add_child(spots)
 	for spot: Array in [
-		["Town — Aethertown", "res://world/town.tscn"],
-		["Forest — Verdant Pass", "res://world/forest.tscn"],
-		["Deep Woods — Selinoran", "res://world/deep_woods.tscn"],
-		["SELENORA — HD-2D 3D Pilot", "res://world3d/hd_selenora.tscn"],
-		["Outside — Crystal Fields", "res://world/outside.tscn"],
-		["Dungeon — Crystal Site", "res://world/dungeon.tscn"],
+		["★ HD-2D: Selenora (3D town)", "res://world3d/hd_selenora.tscn"],
+		["★ HD-2D: The Verdant Pass", "res://world3d/hd_forest.tscn"],
+		["★ HD-2D: The Selinoran Deep", "res://world3d/hd_deepwoods.tscn"],
+		["★ HD-2D: The Crystal Fields", "res://world3d/hd_fields.tscn"],
+		["★ HD-2D: Crystal Site II", "res://world3d/hd_dungeon.tscn"],
+		["2D: Selenora", "res://world/town.tscn"],
+		["2D: Verdant Pass", "res://world/forest.tscn"],
+		["2D: Selinoran Deep", "res://world/deep_woods.tscn"],
+		["2D: Crystal Fields", "res://world/outside.tscn"],
+		["2D: Crystal Site", "res://world/dungeon.tscn"],
 	]:
 		var jump: Button = Button.new()
 		jump.text = String(spot[0])

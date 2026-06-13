@@ -36,9 +36,18 @@ func _process(delta: float) -> void:
 	var now: float = Time.get_ticks_msec() / 1000.0
 	var target: Vector2 = Vector2.ZERO
 	if now >= _free_suppressed_until:
-		target = Input.get_vector(
-			"move_left", "move_right", "move_up", "move_down"
-		) * FREE_LOOK_REACH
+		# ARROW KEYS ONLY for the free-look (WASD stays for menu navigation);
+		# the right stick also nudges the frame.
+		var keys: Vector2 = Vector2(
+			float(Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_LEFT)),
+			float(Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_UP))
+		)
+		var stick: Vector2 = Vector2(
+			Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+		)
+		if stick.length() < 0.2:
+			stick = Vector2.ZERO
+		target = (keys + stick).limit_length(1.0) * FREE_LOOK_REACH
 	free_look = free_look.lerp(target, clampf(delta * FREE_LOOK_EASE, 0.0, 1.0))
 	offset = shake_value + free_look
 	zoom = base_zoom * lens

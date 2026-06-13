@@ -11,6 +11,7 @@ const GRASS: String = "res://assets/all files/town_rpg_pack/town_rpg_pack/graphi
 func _init() -> void:
 	area_name = "SELENORA — HD-2D PILOT (3D world, 2D souls)"
 	map_px = Vector2(3840, 2400)
+	spawn_px = Vector2(1950, 1180)  # on the avenue, plaza ahead, castle north
 
 
 func _setup_area() -> void:
@@ -35,29 +36,44 @@ func _setup_area() -> void:
 	if bridge != null:
 		prop(bridge, Vector2(555, 1160), 90.0, 2.2)
 
-	# CASTLE AETHERHOLD — the real thing this time, towers and all.
-	prop(HDAssets.medieval("building_castle_red"), Vector2(2100, 360), 180.0, 9.0, 900.0)
-	prop(HDAssets.medieval("building_tower_A_red"), Vector2(1560, 480), 180.0, 6.0, 200.0)
-	prop(HDAssets.medieval("building_tower_A_red"), Vector2(2640, 480), 180.0, 6.0, 200.0)
-	wall3d(Rect2(1450, 0, 1300, 560), 6.0)
-	# The church and the working town around the plaza.
-	prop(HDAssets.medieval("building_church_red"), Vector2(1650, 780), 160.0, 4.5, 320.0)
-	prop(HDAssets.medieval("building_tavern_red"), Vector2(920, 880), 90.0, 4.0, 300.0)
-	prop(HDAssets.medieval("building_home_A_red"), Vector2(3050, 820), -90.0, 4.0, 280.0)
-	prop(HDAssets.medieval("building_home_B_red"), Vector2(3350, 900), -90.0, 4.0, 280.0)
-	prop(HDAssets.medieval("building_home_A_red"), Vector2(1500, 1450), 0.0, 4.0, 280.0)
-	prop(HDAssets.medieval("building_home_B_red"), Vector2(2480, 1430), 0.0, 4.0, 280.0)
-	prop(HDAssets.medieval("building_market_red"), Vector2(820, 1620), 0.0, 4.0, 300.0)
-	prop(HDAssets.medieval("building_windmill_red"), Vector2(3100, 1950), -35.0, 4.5, 320.0)
-	prop(HDAssets.medieval("building_well_red"), Vector2(2120, 920), 0.0, 3.0, 120.0)
-	prop(HDAssets.medieval("building_lumbermill_red"), Vector2(1250, 1880), 25.0, 4.0, 320.0)
+	# CASTLE AETHERHOLD — a big landmark to the north, framed not crowded.
+	prop(HDAssets.medieval("building_castle_red"), Vector2(2100, 300), 180.0, 7.5, 1000.0)
+	prop(HDAssets.medieval("building_tower_A_red"), Vector2(1500, 440), 180.0, 4.5, 220.0)
+	prop(HDAssets.medieval("building_tower_B_red"), Vector2(2700, 440), 180.0, 4.5, 220.0)
+	prop(HDAssets.medieval("building_tower_A_red"), Vector2(1820, 200), 180.0, 4.0, 200.0)
+	prop(HDAssets.medieval("building_tower_B_red"), Vector2(2380, 200), 180.0, 4.0, 200.0)
+	wall3d(Rect2(1400, 0, 1400, 500), 7.0)
+	# The church and a DENSE working town (eye candy to carry the floor).
+	prop(HDAssets.medieval("building_church_red"), Vector2(1620, 760), 160.0, 4.5, 360.0)
+	prop(HDAssets.medieval("building_tavern_red"), Vector2(820, 840), 90.0, 4.0, 320.0)
+	prop(HDAssets.medieval("building_market_red"), Vector2(760, 1640), 0.0, 4.0, 320.0)
+	prop(HDAssets.medieval("building_blacksmith_red"), Vector2(1150, 720), 120.0, 3.6, 300.0)
+	prop(HDAssets.medieval("building_windmill_red"), Vector2(3150, 1980), -35.0, 4.5, 340.0)
+	prop(HDAssets.medieval("building_watermill_red"), Vector2(700, 1280), 60.0, 4.0, 320.0)
+	prop(HDAssets.medieval("building_lumbermill_red"), Vector2(1220, 1960), 25.0, 4.0, 320.0)
+	prop(HDAssets.medieval("building_mine_red"), Vector2(3450, 1720), -60.0, 4.0, 320.0)
+	prop(HDAssets.medieval("building_archeryrange_red"), Vector2(2800, 760), 200.0, 3.6, 280.0)
+	prop(HDAssets.medieval("building_well_red"), Vector2(2120, 980), 0.0, 2.6, 120.0)
+	# Homes lining the avenue, set back off the road — density beats bare floor.
+	var home_specs: Array = [
+		[Vector2(3100, 800), -90.0], [Vector2(3420, 880), -90.0], [Vector2(3580, 1320), -90.0],
+		[Vector2(1480, 1520), 0.0], [Vector2(2520, 1500), 10.0], [Vector2(3000, 1520), -10.0],
+		[Vector2(1760, 1560), 0.0], [Vector2(3300, 2080), -40.0], [Vector2(1360, 720), 90.0],
+		[Vector2(2200, 1560), 0.0], [Vector2(560, 1520), 30.0], [Vector2(3500, 1120), -90.0],
+	]
+	for i: int in range(home_specs.size()):
+		var spec: Array = home_specs[i]
+		prop(HDAssets.medieval("building_home_%s_red" % ("A" if i % 2 == 0 else "B")),
+			spec[0], float(spec[1]), 3.6, 280.0)
 
-	# Market clutter from the dungeon kit.
+	# Market + yard clutter from the dungeon kit (more = better).
 	for clutter: Array in [
-		["barrel_small", Vector2(950, 1580)], ["crate_large", Vector2(975, 1655)],
-		["barrel_large_decorated", Vector2(2420, 1520)], ["box_stacked", Vector2(2990, 870)],
+		["barrel_small", Vector2(900, 1600)], ["crates_stacked", Vector2(960, 1680)],
+		["barrel_large_decorated", Vector2(2460, 1540)], ["barrel_small_stack", Vector2(3040, 850)],
+		["crates_stacked", Vector2(840, 1720)], ["barrel_large", Vector2(1240, 2020)],
+		["table_medium", Vector2(2060, 1050)], ["barrel_small", Vector2(2180, 1060)],
 	]:
-		prop(HDAssets.dungeon(String(clutter[0])), clutter[1], randf_range(0, 360), 1.4)
+		prop(HDAssets.dungeon(String(clutter[0])), clutter[1], randf_range(0, 360), 1.6)
 
 	# The woods ring — real trees with real depth.
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -99,4 +115,8 @@ func _setup_area() -> void:
 		"It's beautiful, Bas. Phi would have climbed everything.",
 	] as Array[String])
 
-	portal(Rect2(3760, 1040, 80, 220), "res://world/town.tscn", "To the 2D road >")
+	# East: on into the 3D Verdant Pass. (Esc always drops to the 2D town.)
+	portal(Rect2(3760, 1040, 80, 220), "res://world3d/hd_forest.tscn", "The Verdant Pass >")
+	npc3("villager_d", Vector2(3600, 1150), [
+		"The road east is HD now too, they say. Whole world's gone deep.",
+	] as Array[String], Color(0.75, 0.85, 0.7))

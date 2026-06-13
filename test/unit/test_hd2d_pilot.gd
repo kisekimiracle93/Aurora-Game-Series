@@ -32,7 +32,7 @@ func test_hd_selenora_boots_with_player_and_camera() -> void:
 	await get_tree().process_frame
 	assert_not_null(area.player, "the billboarded walker stands")
 	assert_not_null(area.player.camera, "the diorama rig rides along")
-	assert_almost_eq(area.player.camera.fov, 30.0, 0.1, "long lens, miniature world")
+	assert_almost_eq(area.player.camera.fov, 33.0, 0.1, "long lens, miniature world")
 	assert_not_null(area.player.camera.attributes, "depth of field armed")
 	var lights: int = 0
 	var environment_found: bool = false
@@ -51,3 +51,35 @@ func test_hd_selenora_boots_with_player_and_camera() -> void:
 	assert_true(
 		ResourceLoader.exists("res://world/town.tscn"), "the portal home exists"
 	)
+
+
+func test_full_3d_world_chain_boots() -> void:
+	# Every HD-2D area instances with a player, a graded environment, and the
+	# cinematic post layer — the whole walkable world ported to 3D.
+	for path: String in [
+		"res://world3d/hd_selenora.tscn", "res://world3d/hd_forest.tscn",
+		"res://world3d/hd_deepwoods.tscn", "res://world3d/hd_fields.tscn",
+		"res://world3d/hd_dungeon.tscn",
+	]:
+		var area: HDBase = load(path).instantiate()
+		add_child_autofree(area)
+		await get_tree().process_frame
+		assert_not_null(area.player, "%s walker" % path.get_file())
+		assert_not_null(area.environment, "%s graded environment" % path.get_file())
+		var has_cinema: bool = false
+		for child: Node in area.get_children():
+			if child is CanvasLayer and (child as CanvasLayer).layer == 70:
+				has_cinema = true
+		assert_true(has_cinema, "%s cinematic post layer" % path.get_file())
+		area.queue_free()
+		await get_tree().process_frame
+
+
+func test_cinematic_shader_and_foley_present() -> void:
+	assert_true(
+		ResourceLoader.exists("res://world3d/shaders/hd_cinematic.gdshader"),
+		"the tilt-shift / grade / grain post shader"
+	)
+	# Footstep + ambience foley wired from the uploaded library.
+	assert_not_null(PlayerAvatar3D._load_foley("Footsteps_walking"), "footsteps")
+	assert_not_null(PlayerAvatar3D._load_foley("Rain_Heavy"), "deep-woods rain")

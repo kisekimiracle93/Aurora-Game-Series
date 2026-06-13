@@ -15,6 +15,9 @@ var _sprite: AnimatedSprite3D
 var _lantern: OmniLight3D
 var camera: Camera3D
 var _facing: String = "down"
+var _steps: AudioStreamPlayer
+var _step_stream: AudioStream
+var _run_stream: AudioStream
 
 
 func _ready() -> void:
@@ -47,13 +50,21 @@ func _ready() -> void:
 	_lantern.position = Vector3(0.2, 1.0, 0.0)
 	add_child(_lantern)
 
+	# Real footstep foley (from the uploaded library), looped while moving.
+	_steps = AudioStreamPlayer.new()
+	_steps.bus = "Sfx" if AudioServer.get_bus_index("Sfx") != -1 else "Master"
+	_steps.volume_db = -8.0
+	add_child(_steps)
+	_step_stream = _load_foley("Footsteps_walking")
+	_run_stream = _load_foley("Footsteps_ running")
+
 	# The diorama rig: a long lens pitched down at the miniature world.
 	var arm: Node3D = Node3D.new()
-	arm.rotation_degrees = Vector3(-38.0, 0.0, 0.0)
+	arm.rotation_degrees = Vector3(-42.0, 0.0, 0.0)
 	add_child(arm)
 	camera = Camera3D.new()
-	camera.position = Vector3(0.0, 0.0, 11.5)
-	camera.fov = 30.0
+	camera.position = Vector3(0.0, 0.0, 14.0)
+	camera.fov = 33.0
 	var attributes: CameraAttributesPractical = CameraAttributesPractical.new()
 	attributes.dof_blur_far_enabled = true
 	attributes.dof_blur_far_distance = 14.0
@@ -73,6 +84,17 @@ func _build_body() -> void:
 		_sprite.sprite_frames = frames
 		_sprite.animation = "idle_down"
 		_sprite.play()
+
+
+static func _load_foley(base: String) -> AudioStream:
+	for ext: String in ["wav", "ogg", "mp3"]:
+		var path: String = "res://assets/audio/foley/%s.%s" % [base, ext]
+		if ResourceLoader.exists(path):
+			var stream: AudioStream = load(path)
+			if stream is AudioStreamWAV:
+				(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+			return stream
+	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -109,7 +131,16 @@ func _physics_process(_delta: float) -> void:
 	if input_dir.length() < 0.2:
 		if _sprite.sprite_frames != null and not _sprite.animation.begins_with("idle_"):
 			_sprite.play("idle_" + _facing)
+		if _steps != null and _steps.playing:
+			_steps.stop()
 		return
+	# Footsteps: the matching foley loops while you move (faster when running).
+	if _steps != null:
+		var want: AudioStream = _run_stream if running else _step_stream
+		if want != null and (_steps.stream != want or not _steps.playing):
+			_steps.stream = want
+			_steps.pitch_scale = randf_range(0.95, 1.06)
+			_steps.play()
 	if absf(input_dir.x) > absf(input_dir.y):
 		_facing = "right" if input_dir.x > 0.0 else "left"
 	else:
